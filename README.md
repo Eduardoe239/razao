@@ -1,8 +1,9 @@
 # O Razão — controle financeiro pessoal
 
-App de gestão de gastos: painel, lançamentos, contas, recorrências, metas,
-análises com previsão e mais. Roda 100% no seu navegador, sem servidor —
-seus dados ficam salvos só na sua máquina (localStorage do navegador).
+App de gestão de gastos: painel, lançamentos, contas, transferências,
+recorrências, metas (limites e poupança), análises com previsão e mais.
+Roda 100% no seu navegador, sem servidor — seus dados ficam salvos só na
+sua máquina (localStorage do navegador).
 
 ## Como rodar
 
@@ -28,6 +29,15 @@ Baixe em https://nodejs.org se ainda não tiver.
 
 Pra parar, é só fechar o terminal ou apertar `Ctrl+C`.
 
+## Rodar os testes automatizados
+
+O núcleo financeiro (`src/domain/money.js` — a lógica de dinheiro em
+centavos e distribuição de parcelas) tem testes automatizados de verdade:
+
+```
+npm test
+```
+
 ## Passar pros seus amigos usarem
 
 Cada pessoa precisa rodar a própria cópia na própria máquina (os dados
@@ -52,3 +62,21 @@ abrir o app. Isso quer dizer:
 - Os dados não sincronizam entre computadores/navegadores diferentes.
 - Pra fazer backup, use o botão **Exportar backup (.json)** dentro da
   aba Ajustes do próprio app, e guarde o arquivo em lugar seguro.
+
+## Sobre a arquitetura
+
+Este projeto está evoluindo em fases (ver `Razao_Especificacao_10_de_10`):
+- **Fase 1** (concluída): correções estruturais — data local correta,
+  edição sem perder metadados, exclusão com integridade referencial.
+- **Fase 2** (concluída): dinheiro em centavos inteiros (`src/domain/money.js`,
+  com testes), transferências entre contas como operação própria, parcelamento
+  com distribuição determinística de centavos, e metas de poupança com dois
+  modos (acompanhamento virtual ou reserva real numa conta dedicada).
+- **Fase 3+**: cartão de crédito com ciclo de fatura, orçamento por período,
+  mais extração de domínio, testes de integração, acessibilidade.
+
+A maior parte da lógica ainda vive em `src/App.jsx` (single-file, por causa
+da restrição do artifact do Claude, que precisa ser um arquivo só). O
+`src/domain/money.js` é o começo real da extração de domínio pedida na
+especificação — próximas fases devem continuar esse movimento.
+

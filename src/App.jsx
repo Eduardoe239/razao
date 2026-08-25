@@ -11,6 +11,7 @@ import {
   Sparkles, BookOpen, Landmark, CreditCard, PiggyBank, Search, Download,
   Upload, Bell, Gauge, ArrowUpRight, ArrowDownRight, Layers, Clock, Check,
   Tag, Star, Coffee, Book, Plane, Dumbbell, Gift, Music, Smartphone, PawPrint,
+  ArrowRightLeft, Info, Receipt, CalendarClock,
 } from "lucide-react";
 
 /* ---------------------------------- tema ---------------------------------- */
@@ -72,10 +73,40 @@ function todayISO() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 const monthKey = (iso) => iso.slice(0, 7);
-const brl = (n) =>
-  (n < 0 ? "-" : "") +
-  "R$ " +
-  Math.abs(n).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/* ------------------------------- dinheiro (Money) -------------------------------
+ * Todo valor monetário do domínio vive em CENTAVOS INTEIROS a partir daqui.
+ * Nunca somamos reais em float — é assim que sistemas financeiros acumulam erro
+ * de arredondamento silenciosamente. Os formulários mostram reais (ex.: "12,50"),
+ * mas assim que o valor entra no estado, ele já é um inteiro de centavos.
+ * ------------------------------------------------------------------------------- */
+const Money = {
+  // string digitada pelo usuário (reais) -> centavos inteiros.
+  // Se tem vírgula, ela é o separador decimal e pontos antes dela são milhar
+  // (ex.: "1.234,56"). Sem vírgula, aceita ponto decimal comum ("12.5").
+  parseToCents(str) {
+    let s = String(str ?? "").trim();
+    if (!s) return 0;
+    if (s.includes(",")) s = s.replace(/\./g, "").replace(",", ".");
+    const n = parseFloat(s);
+    return Number.isFinite(n) ? Math.round(n * 100) : 0;
+  },
+  centsToInput(cents) {
+    return cents == null ? "" : (cents / 100).toFixed(2).replace(".", ",");
+  },
+  // distribui `totalCents` em `n` parcelas de forma determinística: divide
+  // inteiro, e o resto (sempre < n centavos) vai 1 centavo por vez pras
+  // primeiras parcelas — convenção padrão de sistemas contábeis.
+  splitInstallments(totalCents, n) {
+    const base = Math.floor(totalCents / n);
+    const remainder = totalCents - base * n;
+    return Array.from({ length: n }, (_, i) => base + (i < remainder ? 1 : 0));
+  },
+};
+function brl(cents) {
+  const n = (cents || 0) / 100;
+  return (n < 0 ? "-" : "") + "R$ " + Math.abs(n).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 const MONTH_NAMES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 const monthLabel = (key) => {
   const [y, m] = key.split("-");
@@ -100,10 +131,25 @@ function catInfo(id, isIncome, customCategories = []) {
 function accInfo(id, accounts) {
   return accounts.find((a) => a.id === id) || { id, name: "Conta removida", type: "carteira", color: C.textFaint, initialBalance: 0 };
 }
+// Meta "reserva": dinheiro de verdade guardado numa conta dedicada — o saldo
+// vem da própria conta (fonte única de verdade, sem duplicar percepção de $).
+// Meta "virtual": só acompanhamento — soma o histórico de aportes/resgates.
+function savingsGoalSaved(goal, accounts, transactions) {
+  if (goal.mode === "reserva" && goal.accountId) {
+    return accountBalance(goal.accountId, transactions, 0);
+  }
+  return (goal.contributions || []).reduce((s, c) => s + c.amount, 0);
+}
 function accountBalance(accountId, transactions, initialBalance) {
   let bal = initialBalance;
   transactions.forEach((t) => {
-    if (t.accountId !== accountId || t.status !== "pago") return;
+    if (t.status !== "pago") return;
+    if (t.type === "transferencia") {
+      if (t.fromAccountId === accountId) bal -= t.amount;
+      if (t.toAccountId === accountId) bal += t.amount;
+      return;
+    }
+    if (t.accountId !== accountId) return;
     bal += t.type === "receita" ? t.amount : -t.amount;
   });
   return bal;
@@ -111,6 +157,61 @@ function accountBalance(accountId, transactions, initialBalance) {
 function csvEscape(s) {
   return '"' + String(s == null ? "" : s).replace(/"/g, '""') + '"';
 }
+
+/* ------------------------------- fatura de cartão -------------------------------
+ * Uma fatura é identificada pela chave do mês em que ela FECHA (invoiceKey).
+ * Uma compra feita no dia D pertence à fatura que fecha no dia `closingDay`:
+ *   - se D <= closingDay do mês da compra, ela cai na fatura que fecha ESTE mês
+ *   - se D > closingDay, ela já passou do fechamento — cai na fatura do mês seguinte
+ * O vencimento pode ser antes ou depois do fechamento dentro do calendário:
+ * se dueDay < closingDay, o vencimento é interpretado como caindo no mês seguinte
+ * ao fechamento (convenção mais comum em cartões brasileiros).
+ * ---------------------------------------------------------------------------- */
+function invoiceKeyForDate(dateStr, closingDay) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  if (d <= closingDay) return `${y}-${String(m).padStart(2, "0")}`;
+  const dt = new Date(y, m, 1); // mês seguinte
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
+}
+function invoiceDueDate(invoiceKey, dueDay, closingDay) {
+  const [y, m] = invoiceKey.split("-").map(Number);
+  if (dueDay < closingDay) {
+    const dt = new Date(y, m, dueDay); // m já é 1-indexed -> new Date(y,m,..) cai no mês seguinte
+    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dueDay).padStart(2, "0")}`;
+  }
+  return `${y}-${String(m).padStart(2, "0")}-${String(dueDay).padStart(2, "0")}`;
+}
+function invoiceLabel(key) {
+  const [y, m] = key.split("-");
+  return `${MONTH_NAMES[parseInt(m, 10) - 1]}/${y.slice(2)}`;
+}
+// Lista as faturas de um cartão num intervalo de meses ao redor de `aroundKey`,
+// já com total, vencimento, status e quanto foi pago (rastreado por transferências
+// marcadas com linkedInvoice, nunca inferido só pelo saldo).
+function cardInvoices(card, transactions, aroundKey, monthsBack = 3, monthsFwd = 2) {
+  const closingDay = card.closingDay || 1;
+  const dueDay = card.dueDay || 10;
+  const [ay, am] = aroundKey.split("-").map(Number);
+  const keys = [];
+  for (let i = -monthsBack; i <= monthsFwd; i++) {
+    const dt = new Date(ay, am - 1 + i, 1);
+    keys.push(`${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`);
+  }
+  const todayK = todayISO();
+  return keys.map((key) => {
+    const purchases = transactions.filter((t) => t.type === "gasto" && t.accountId === card.id && invoiceKeyForDate(t.date, closingDay) === key);
+    const total = purchases.reduce((s, t) => s + t.amount, 0);
+    const paid = transactions
+      .filter((t) => t.type === "transferencia" && t.toAccountId === card.id && t.linkedInvoice === key && t.status === "pago")
+      .reduce((s, t) => s + t.amount, 0);
+    const due = invoiceDueDate(key, dueDay, closingDay);
+    const closed = todayK > `${key}-${String(closingDay).padStart(2, "0")}`;
+    let status = "aberta";
+    if (closed) status = paid >= total && total > 0 ? "paga" : (todayK > due ? "vencida" : "fechada");
+    return { key, label: invoiceLabel(key), purchases, total, paid, due, status, remaining: Math.max(0, total - paid) };
+  });
+}
+
 function downloadFile(content, filename, mime) {
   const blob = new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);
@@ -274,17 +375,38 @@ export default function App() {
           const p = JSON.parse(res.value);
           let accs = p.accounts && p.accounts.length ? p.accounts : null;
           let txs = p.transactions || [];
+          let goalsData = p.goals || {};
+          let savingsData = p.savingsGoals || [];
+          let recurringData = p.recurring || [];
           if (!accs) {
             const def = { id: uid(), name: "Carteira", type: "carteira", color: "#c9a227", initialBalance: 0 };
             accs = [def];
             txs = txs.map((t) => (t.accountId ? t : { ...t, accountId: def.id }));
           }
+          // Migração única: dados salvos antes da Fase 2 guardavam reais em float.
+          // Convertemos pra centavos inteiros uma única vez (a flag moneyUnit
+          // impede rodar de novo e corromper dados já migrados).
+          if (p.moneyUnit !== "cents") {
+            const toCents = (n) => (n == null ? n : Math.round(n * 100));
+            txs = txs.map((t) => ({ ...t, amount: toCents(t.amount) }));
+            accs = accs.map((a) => ({ ...a, initialBalance: toCents(a.initialBalance || 0) }));
+            goalsData = Object.fromEntries(Object.entries(goalsData).map(([k, v]) => [k, v ? toCents(v) : v]));
+            savingsData = savingsData.map((g) => ({ ...g, target: toCents(g.target), saved: toCents(g.saved || 0) }));
+            recurringData = recurringData.map((r) => ({ ...r, amount: toCents(r.amount) }));
+          }
+          // Normaliza metas antigas (só tinham um número "saved") pro novo formato
+          // com modo explícito e histórico de contribuições rastreável.
+          savingsData = savingsData.map((g) => ({
+            ...g,
+            mode: g.mode || "virtual",
+            contributions: g.contributions || (g.saved ? [{ id: uid(), date: todayISO(), amount: g.saved }] : []),
+          }));
           setTransactions(txs);
-          setGoals(p.goals || {});
+          setGoals(goalsData);
           setProfileName(p.profileName || "Meu razão");
           setAccounts(accs);
-          setRecurring(p.recurring || []);
-          setSavingsGoals(p.savingsGoals || []);
+          setRecurring(recurringData);
+          setSavingsGoals(savingsData);
           setCustomCategories(p.customCategories || []);
         } else {
           setAccounts([{ id: uid(), name: "Carteira", type: "carteira", color: "#c9a227", initialBalance: 0 }]);
@@ -302,7 +424,7 @@ export default function App() {
     if (!loaded.current) return;
     (async () => {
       try {
-        await window.storage.set("financas:data", JSON.stringify({ transactions, goals, profileName, accounts, recurring, savingsGoals, customCategories }), false);
+        await window.storage.set("financas:data", JSON.stringify({ moneyUnit: "cents", transactions, goals, profileName, accounts, recurring, savingsGoals, customCategories }), false);
       } catch (e) {
         console.error("falha ao salvar", e);
       }
@@ -323,12 +445,17 @@ export default function App() {
         if (already) return;
         const day = Math.min(r.dayOfMonth || 1, 28);
         const dateStr = `${todayKey}-${String(day).padStart(2, "0")}`;
-        additions.push({
-          id: uid(), type: r.type, date: dateStr, desc: r.desc, amount: r.amount,
-          category: r.category, necessity: r.type === "gasto" ? (r.necessity || "necessario") : undefined,
-          notes: "Gerado automaticamente pela recorrência", accountId: r.accountId,
-          status: day <= todayDay ? "pago" : "pendente", recurringId: r.id,
-        });
+        const status = day <= todayDay ? "pago" : "pendente";
+        if (r.type === "transferencia") {
+          additions.push({ id: uid(), type: "transferencia", date: dateStr, desc: r.desc, amount: r.amount, fromAccountId: r.fromAccountId, toAccountId: r.toAccountId, notes: "Gerado automaticamente pela recorrência", status, recurringId: r.id });
+        } else {
+          additions.push({
+            id: uid(), type: r.type, date: dateStr, desc: r.desc, amount: r.amount,
+            category: r.category, necessity: r.type === "gasto" ? (r.necessity || "necessario") : undefined,
+            notes: "Gerado automaticamente pela recorrência", accountId: r.accountId,
+            status, recurringId: r.id,
+          });
+        }
       });
       return additions.length ? [...prev, ...additions] : prev;
     });
@@ -349,22 +476,20 @@ export default function App() {
       setTransactions((prev) => prev.map((t) => (t.id === tx.id ? { ...t, ...tx } : t)));
       showToast("Lançamento atualizado.");
     } else if (installments && installments > 1) {
-      const total = tx.amount;
-      const base = Math.floor((total / installments) * 100) / 100;
-      const remainder = Math.round((total - base * installments) * 100) / 100;
+      // Distribuição determinística de centavos: divide inteiro e distribui o
+      // resto (sempre < N centavos) 1 centavo por vez nas primeiras parcelas.
+      const parts = Money.splitInstallments(tx.amount, installments);
       const group = uid();
       const today = todayISO();
-      const news = [];
-      for (let i = 0; i < installments; i++) {
+      const news = parts.map((amount, i) => {
         const date = addMonths(tx.date, i);
-        const amount = i === installments - 1 ? Math.round((base + remainder) * 100) / 100 : base;
-        news.push({
+        return {
           ...tx, id: uid(), date, amount,
           desc: `${tx.desc || catInfo(tx.category, false).label} (${i + 1}/${installments})`,
           status: date <= today ? "pago" : "pendente",
           installmentGroup: group, installmentIndex: i + 1, installmentTotal: installments,
-        });
-      }
+        };
+      });
       setTransactions((prev) => [...prev, ...news]);
       showToast(`${installments} parcelas lançadas.`);
     } else {
@@ -396,10 +521,23 @@ export default function App() {
   }
   function deleteAccount(id) {
     if (accounts.length <= 1) { showToast("Você precisa manter ao menos uma conta."); return; }
-    if (transactions.some((t) => t.accountId === id)) { showToast("Essa conta tem lançamentos — apague-os ou migre-os antes."); return; }
-    if (recurring.some((r) => r.accountId === id)) { showToast("Essa conta tem recorrências vinculadas — apague-as ou migre-as antes."); return; }
+    if (transactions.some((t) => t.accountId === id || t.fromAccountId === id || t.toAccountId === id)) { showToast("Essa conta tem lançamentos — apague-os ou migre-os antes."); return; }
+    if (recurring.some((r) => r.accountId === id || r.fromAccountId === id || r.toAccountId === id)) { showToast("Essa conta tem recorrências vinculadas — apague-as ou migre-as antes."); return; }
+    if (savingsGoals.some((g) => g.accountId === id)) { showToast("Essa conta é a reserva de uma meta de poupança — apague a meta primeiro."); return; }
     setAccounts((prev) => prev.filter((a) => a.id !== id));
     showToast("Conta removida.");
+  }
+  // Pagar fatura = transferência real de uma conta pro cartão, marcada com
+  // qual fatura ela quita (linkedInvoice). Nunca inferimos pagamento só pelo
+  // saldo — cada pagamento é uma operação explícita e rastreável.
+  function payInvoice(cardId, invoiceKey, amountCents, fromAccountId) {
+    if (!fromAccountId || fromAccountId === cardId || amountCents <= 0) { showToast("Escolha uma conta de origem válida."); return; }
+    setTransactions((prev) => [...prev, {
+      id: uid(), type: "transferencia", date: todayISO(), amount: amountCents,
+      fromAccountId, toAccountId: cardId, linkedInvoice: invoiceKey,
+      notes: `Pagamento da fatura ${invoiceLabel(invoiceKey)}`, status: "pago",
+    }]);
+    showToast("Fatura paga.");
   }
 
   /* ---- recorrências ---- */
@@ -427,28 +565,71 @@ export default function App() {
     if (already) { showToast("Já lançado neste mês."); return; }
     const day = Math.min(r.dayOfMonth || 1, 28);
     const date = `${key}-${String(day).padStart(2, "0")}`;
-    setTransactions((prev) => [...prev, {
-      id: uid(), type: r.type, date, desc: r.desc, amount: r.amount, category: r.category,
-      necessity: r.type === "gasto" ? (r.necessity || "necessario") : undefined,
-      notes: "Gerado manualmente a partir da recorrência", accountId: r.accountId,
-      status: date <= todayISO() ? "pago" : "pendente", recurringId: r.id,
-    }]);
+    const status = date <= todayISO() ? "pago" : "pendente";
+    if (r.type === "transferencia") {
+      setTransactions((prev) => [...prev, { id: uid(), type: "transferencia", date, desc: r.desc, amount: r.amount, fromAccountId: r.fromAccountId, toAccountId: r.toAccountId, notes: "Gerado manualmente a partir da recorrência", status, recurringId: r.id }]);
+    } else {
+      setTransactions((prev) => [...prev, {
+        id: uid(), type: r.type, date, desc: r.desc, amount: r.amount, category: r.category,
+        necessity: r.type === "gasto" ? (r.necessity || "necessario") : undefined,
+        notes: "Gerado manualmente a partir da recorrência", accountId: r.accountId,
+        status, recurringId: r.id,
+      }]);
+    }
     showToast("Lançamento gerado.");
   }
 
-  /* ---- metas de poupança ---- */
+  /* ---- metas de poupança ----
+   * "virtual": só acompanhamento, não move dinheiro real — soma um histórico
+   *   de aportes/resgates que o usuário registra manualmente.
+   * "reserva": cria uma conta de verdade (aparece em Contas) e cada aporte/
+   *   resgate é uma Transferência real entre essa reserva e outra conta —
+   *   assim o dinheiro nunca é contado duas vezes no patrimônio.
+   */
   function saveSavingsGoal(g) {
-    if (g.id) setSavingsGoals((prev) => prev.map((x) => (x.id === g.id ? g : x)));
-    else setSavingsGoals((prev) => [...prev, { ...g, id: uid(), saved: 0 }]);
+    if (g.id) {
+      setSavingsGoals((prev) => prev.map((x) => (x.id === g.id ? { ...x, ...g } : x)));
+      showToast("Meta atualizada.");
+    } else {
+      const goalId = uid();
+      if (g.mode === "reserva") {
+        const accId = uid();
+        setAccounts((prev) => [...prev, { id: accId, name: `Reserva: ${g.name}`, type: "poupanca", color: g.color, initialBalance: 0, linkedGoalId: goalId }]);
+        setSavingsGoals((prev) => [...prev, { ...g, id: goalId, accountId: accId, contributions: [] }]);
+      } else {
+        setSavingsGoals((prev) => [...prev, { ...g, id: goalId, contributions: [] }]);
+      }
+      showToast("Meta criada.");
+    }
     setShowSavingsForm(false);
-    showToast("Meta salva.");
   }
   function deleteSavingsGoal(id) {
-    setSavingsGoals((prev) => prev.filter((g) => g.id !== id));
+    const g = savingsGoals.find((x) => x.id === id);
+    if (g && g.mode === "reserva") {
+      const bal = accountBalance(g.accountId, transactions, 0);
+      if (bal !== 0) { showToast("Essa meta ainda tem dinheiro guardado — resgate tudo antes de apagar."); return; }
+      setAccounts((prev) => prev.filter((a) => a.id !== g.accountId));
+    }
+    setSavingsGoals((prev) => prev.filter((x) => x.id !== id));
     showToast("Meta removida.");
   }
-  function contributeSavings(id, delta) {
-    setSavingsGoals((prev) => prev.map((g) => (g.id === id ? { ...g, saved: Math.max(0, Math.round((g.saved + delta) * 100) / 100) } : g)));
+  function contributeSavings(goalId, delta, otherAccountId) {
+    const g = savingsGoals.find((x) => x.id === goalId);
+    if (!g) return;
+    if (g.mode === "reserva") {
+      if (!otherAccountId) { showToast("Escolha a conta de origem/destino."); return; }
+      const amount = Math.abs(delta);
+      const isAporte = delta > 0;
+      setTransactions((prev) => [...prev, {
+        id: uid(), type: "transferencia", date: todayISO(), amount,
+        fromAccountId: isAporte ? otherAccountId : g.accountId,
+        toAccountId: isAporte ? g.accountId : otherAccountId,
+        notes: `${isAporte ? "Aporte" : "Resgate"} — meta: ${g.name}`, status: "pago",
+      }]);
+      showToast(isAporte ? "Aporte registrado." : "Resgate registrado.");
+    } else {
+      setSavingsGoals((prev) => prev.map((x) => (x.id === goalId ? { ...x, contributions: [...(x.contributions || []), { id: uid(), date: todayISO(), amount: delta }] } : x)));
+    }
   }
 
   /* ---- categorias personalizadas ---- */
@@ -471,17 +652,26 @@ export default function App() {
 
   /* ---- import / export ---- */
   function exportCSV() {
-    const header = ["data", "tipo", "descricao", "categoria", "conta", "valor", "necessidade", "status", "notas"];
-    const rows = transactions.map((t) => [
-      t.date, t.type, csvEscape(t.desc), catInfo(t.category, t.type === "receita", customCategories).label,
-      accInfo(t.accountId, accounts).name, t.amount.toFixed(2).replace(".", ","),
-      t.necessity ? NECESSITY[t.necessity].label : "", t.status || "pago", csvEscape(t.notes),
-    ].join(";"));
+    const header = ["data", "tipo", "descricao", "categoria", "conta", "conta_destino", "valor", "necessidade", "status", "notas"];
+    const rows = transactions.map((t) => {
+      if (t.type === "transferencia") {
+        return [
+          t.date, "transferência", csvEscape(t.desc || "Transferência"), "",
+          accInfo(t.fromAccountId, accounts).name, accInfo(t.toAccountId, accounts).name,
+          (t.amount / 100).toFixed(2).replace(".", ","), "", t.status || "pago", csvEscape(t.notes),
+        ].join(";");
+      }
+      return [
+        t.date, t.type, csvEscape(t.desc), catInfo(t.category, t.type === "receita", customCategories).label,
+        accInfo(t.accountId, accounts).name, "", (t.amount / 100).toFixed(2).replace(".", ","),
+        t.necessity ? NECESSITY[t.necessity].label : "", t.status || "pago", csvEscape(t.notes),
+      ].join(";");
+    });
     downloadFile([header.join(";"), ...rows].join("\n"), `lancamentos-${monthCursor}.csv`, "text/csv;charset=utf-8");
     showToast("CSV exportado.");
   }
   function exportBackup() {
-    downloadFile(JSON.stringify({ transactions, goals, profileName, accounts, recurring, savingsGoals, customCategories }, null, 2), "backup-financas.json", "application/json");
+    downloadFile(JSON.stringify({ moneyUnit: "cents", transactions, goals, profileName, accounts, recurring, savingsGoals, customCategories }, null, 2), "backup-financas.json", "application/json");
     showToast("Backup exportado.");
   }
   function importBackup(e) {
@@ -491,12 +681,31 @@ export default function App() {
     reader.onload = () => {
       try {
         const data = JSON.parse(reader.result);
-        setTransactions(data.transactions || []);
-        setGoals(data.goals || {});
+        const toCents = (n) => (n == null ? n : Math.round(n * 100));
+        const legacy = data.moneyUnit !== "cents";
+        let txs = data.transactions || [];
+        let accs = data.accounts && data.accounts.length ? data.accounts : accounts;
+        let goalsData = data.goals || {};
+        let savingsData = data.savingsGoals || [];
+        let recurringData = data.recurring || [];
+        if (legacy) {
+          txs = txs.map((t) => ({ ...t, amount: toCents(t.amount) }));
+          accs = accs.map((a) => ({ ...a, initialBalance: toCents(a.initialBalance || 0) }));
+          goalsData = Object.fromEntries(Object.entries(goalsData).map(([k, v]) => [k, v ? toCents(v) : v]));
+          savingsData = savingsData.map((g) => ({ ...g, target: toCents(g.target), saved: toCents(g.saved || 0) }));
+          recurringData = recurringData.map((r) => ({ ...r, amount: toCents(r.amount) }));
+        }
+        savingsData = savingsData.map((g) => ({
+          ...g,
+          mode: g.mode || "virtual",
+          contributions: g.contributions || (g.saved ? [{ id: uid(), date: todayISO(), amount: g.saved }] : []),
+        }));
+        setTransactions(txs);
+        setGoals(goalsData);
         setProfileName(data.profileName || profileName);
-        setAccounts(data.accounts && data.accounts.length ? data.accounts : accounts);
-        setRecurring(data.recurring || []);
-        setSavingsGoals(data.savingsGoals || []);
+        setAccounts(accs);
+        setRecurring(recurringData);
+        setSavingsGoals(savingsData);
         setCustomCategories(data.customCategories || []);
         showToast("Backup importado.");
       } catch (err) {
@@ -608,7 +817,7 @@ export default function App() {
     return src
       .filter((t) => filterCat === "todas" || t.category === filterCat)
       .filter((t) => filterNec === "todas" || t.necessity === filterNec)
-      .filter((t) => filterAcc === "todas" || t.accountId === filterAcc)
+      .filter((t) => filterAcc === "todas" || t.accountId === filterAcc || t.fromAccountId === filterAcc || t.toAccountId === filterAcc)
       .filter((t) => !search.trim() || (t.desc || "").toLowerCase().includes(search.trim().toLowerCase()))
       .sort((a, b) => (a.date < b.date ? 1 : -1));
   }, [transactions, monthTx, filterCat, filterNec, filterAcc, search]);
@@ -728,7 +937,7 @@ export default function App() {
             accounts={accounts} transactions={transactions} totalPatrimonio={totalPatrimonio}
             onAdd={() => { setEditingAccount(null); setShowAccountForm(true); }}
             onEdit={(a) => { setEditingAccount(a); setShowAccountForm(true); }}
-            onDelete={deleteAccount}
+            onDelete={deleteAccount} onPayInvoice={payInvoice}
           />
         )}
 
@@ -744,7 +953,8 @@ export default function App() {
         {tab === "metas" && (
           <MetasTab
             goals={goals} setGoals={setGoals} porCategoria={porCategoria} allCatsGasto={allCatsGasto}
-            savingsGoals={savingsGoals} onAddSavings={() => setShowSavingsForm(true)}
+            savingsGoals={savingsGoals} accounts={accounts} transactions={transactions}
+            onAddSavings={() => setShowSavingsForm(true)}
             onContribute={contributeSavings} onDeleteSavings={deleteSavingsGoal}
           />
         )}
@@ -974,22 +1184,29 @@ function TxTable({ transactions, accounts, customCategories, onEdit, onDelete, o
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
       {transactions.map((t) => {
+        const isTransfer = t.type === "transferencia";
         const isIncome = t.type === "receita";
-        const info = catInfo(t.category, isIncome, customCategories);
-        const acc = accInfo(t.accountId, accounts);
-        const Icon = info.icon;
+        const info = isTransfer ? null : catInfo(t.category, isIncome, customCategories);
+        const acc = isTransfer ? null : accInfo(t.accountId, accounts);
+        const fromAcc = isTransfer ? accInfo(t.fromAccountId, accounts) : null;
+        const toAcc = isTransfer ? accInfo(t.toAccountId, accounts) : null;
+        const Icon = isTransfer ? ArrowRightLeft : info.icon;
+        const iconColor = isTransfer ? C.goldSoft : info.color;
         const pending = t.status === "pendente";
         return (
           <div key={t.id} className="rowhover" style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 6px", borderBottom: `1px solid ${C.borderSoft}`, opacity: pending ? 0.75 : 1 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 7, background: info.color + "22", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <Icon size={16} color={info.color} />
+            <div style={{ width: 32, height: 32, borderRadius: 7, background: iconColor + "22", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <Icon size={16} color={iconColor} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13.5, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.desc || info.label}</div>
+              <div style={{ fontSize: 13.5, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {isTransfer ? (t.desc || `${fromAcc.name} → ${toAcc.name}`) : (t.desc || info.label)}
+              </div>
               <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 2, flexWrap: "wrap" }}>
                 <span style={{ fontSize: 11, color: C.textFaint }}>{new Date(t.date + "T00:00:00").toLocaleDateString("pt-BR")}</span>
-                {!compact && <span style={{ fontSize: 11, color: C.textFaint }}>· {acc.name}</span>}
-                {!compact && !isIncome && <Stamp value={t.necessity} />}
+                {!compact && isTransfer && <span style={{ fontSize: 11, color: C.textFaint }}>· {fromAcc.name} → {toAcc.name}</span>}
+                {!compact && !isTransfer && <span style={{ fontSize: 11, color: C.textFaint }}>· {acc.name}</span>}
+                {!compact && !isIncome && !isTransfer && <Stamp value={t.necessity} />}
                 {!compact && pending && (
                   <span style={{ fontSize: 9.5, color: C.goldSoft, border: `1px solid ${C.goldSoft}55`, borderRadius: 4, padding: "1px 5px", display: "flex", alignItems: "center", gap: 3 }}>
                     <Clock size={9} /> PENDENTE
@@ -1007,8 +1224,8 @@ function TxTable({ transactions, accounts, customCategories, onEdit, onDelete, o
                 )}
               </div>
             </div>
-            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, fontWeight: 600, color: isIncome ? C.sageSoft : C.brickSoft, whiteSpace: "nowrap" }}>
-              {isIncome ? "+" : "-"}{brl(t.amount)}
+            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, fontWeight: 600, color: isTransfer ? C.goldSoft : (isIncome ? C.sageSoft : C.brickSoft), whiteSpace: "nowrap" }}>
+              {isTransfer ? "" : (isIncome ? "+" : "-")}{brl(t.amount)}
             </div>
             {!compact && (
               <div style={{ display: "flex", gap: 2 }}>
@@ -1027,7 +1244,8 @@ function TxTable({ transactions, accounts, customCategories, onEdit, onDelete, o
 }
 
 /* ------------------------------- Contas ------------------------------- */
-function ContasTab({ accounts, transactions, totalPatrimonio, onAdd, onEdit, onDelete }) {
+function ContasTab({ accounts, transactions, totalPatrimonio, onAdd, onEdit, onDelete, onPayInvoice }) {
+  const [faturasOf, setFaturasOf] = useState(null);
   return (
     <div>
       <Card style={{ padding: 18, marginBottom: 16 }}>
@@ -1037,12 +1255,18 @@ function ContasTab({ accounts, transactions, totalPatrimonio, onAdd, onEdit, onD
         <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 30, fontWeight: 700, color: totalPatrimonio >= 0 ? C.sageSoft : C.brickSoft, marginTop: 8 }}>
           {brl(totalPatrimonio)}
         </div>
+        <div style={{ fontSize: 11, color: C.textFaint, marginTop: 4 }}>Dívida de cartão já entra aqui (limite não conta como patrimônio).</div>
       </Card>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))", gap: 12 }}>
         {accounts.map((a) => {
           const type = ACCOUNT_TYPES.find((t) => t.id === a.type) || ACCOUNT_TYPES[0];
           const Icon = type.icon;
           const bal = accountBalance(a.id, transactions, a.initialBalance);
+          const isCard = a.type === "cartao";
+          const invoices = isCard ? cardInvoices(a, transactions, monthKey(todayISO())) : null;
+          const currentInvoice = isCard ? invoices.find((i) => i.status === "aberta") : null;
+          const openDebt = isCard ? Math.max(0, -bal) : 0;
+          const available = isCard ? (a.limit || 0) - openDebt : null;
           return (
             <Card key={a.id} className="card-hover" style={{ padding: 16, transition: "border-color .2s" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
@@ -1051,18 +1275,100 @@ function ContasTab({ accounts, transactions, totalPatrimonio, onAdd, onEdit, onD
                 </div>
                 <div>
                   <div style={{ fontSize: 13.5, fontWeight: 600 }}>{a.name}</div>
-                  <div style={{ fontSize: 11, color: C.textFaint }}>{type.label}</div>
+                  <div style={{ fontSize: 11, color: C.textFaint }}>{type.label}{a.linkedGoalId ? " · reserva de meta" : ""}</div>
                 </div>
                 <div style={{ marginLeft: "auto", display: "flex", gap: 2 }}>
                   <button onClick={() => onEdit(a)} style={iconBtnStyle}><Pencil size={13} /></button>
                   <button onClick={() => onDelete(a.id)} style={iconBtnStyle}><Trash2 size={13} /></button>
                 </div>
               </div>
-              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 20, fontWeight: 700, color: bal >= 0 ? C.text : C.brickSoft }}>{brl(bal)}</div>
+
+              {isCard ? (
+                <>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                    <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 18, fontWeight: 700, color: openDebt > 0 ? C.brickSoft : C.text }}>{brl(openDebt)}</span>
+                    <span style={{ fontSize: 10.5, color: C.textFaint }}>em aberto</span>
+                  </div>
+                  <div style={{ height: 6, background: C.bgDeep, borderRadius: 4, overflow: "hidden", margin: "8px 0 6px" }}>
+                    <div style={{ height: "100%", width: `${a.limit ? Math.min(100, Math.round((openDebt / a.limit) * 100)) : 0}%`, background: C.brick, borderRadius: 4 }} />
+                  </div>
+                  <div style={{ fontSize: 11, color: C.textFaint, marginBottom: 10 }}>{brl(Math.max(0, available))} disponível de {brl(a.limit || 0)}</div>
+                  {currentInvoice && (
+                    <div style={{ fontSize: 11.5, color: C.textMuted, marginBottom: 8 }}>
+                      Fatura atual: <span style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{brl(currentInvoice.total)}</span> · fecha dia {a.closingDay || 1}
+                    </div>
+                  )}
+                  <button onClick={() => setFaturasOf(a)} style={{ ...ghostBtnStyle, width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px 0" }}>
+                    <Receipt size={13} /> Ver faturas
+                  </button>
+                </>
+              ) : (
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 20, fontWeight: 700, color: bal >= 0 ? C.text : C.brickSoft }}>{brl(bal)}</div>
+              )}
             </Card>
           );
         })}
       </div>
+      {faturasOf && (
+        <FaturasModal card={faturasOf} accounts={accounts} transactions={transactions} onClose={() => setFaturasOf(null)} onPayInvoice={onPayInvoice} />
+      )}
+    </div>
+  );
+}
+
+function FaturasModal({ card, accounts, transactions, onClose, onPayInvoice }) {
+  const invoices = cardInvoices(card, transactions, monthKey(todayISO()));
+  const STATUS_INFO = {
+    aberta: { label: "ABERTA", color: C.goldSoft },
+    fechada: { label: "FECHADA · AGUARDANDO PAGAMENTO", color: C.brickSoft },
+    vencida: { label: "VENCIDA", color: C.brick },
+    paga: { label: "PAGA", color: C.sageSoft },
+  };
+  return (
+    <ModalSheet title={`Faturas — ${card.name}`} onClose={onClose} maxWidth={560}>
+      <div style={{ fontSize: 12, color: C.textFaint, marginBottom: 14 }}>
+        Fecha todo dia {card.closingDay || 1}, vence dia {card.dueDay || 10}. Compras depois do fechamento já entram na fatura seguinte.
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {invoices.filter((inv) => inv.total > 0 || inv.status === "aberta").map((inv) => (
+          <Card key={inv.key} style={{ padding: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <span style={{ fontSize: 13.5, fontWeight: 600 }}>{inv.label}</span>
+              <span style={{ fontSize: 9.5, fontWeight: 700, color: STATUS_INFO[inv.status].color, border: `1px solid ${STATUS_INFO[inv.status].color}55`, borderRadius: 4, padding: "2px 6px" }}>
+                {STATUS_INFO[inv.status].label}
+              </span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C.textMuted, marginBottom: 8 }}>
+              <span>{inv.purchases.length} compra(s)</span>
+              <span>vence {new Date(inv.due + "T00:00:00").toLocaleDateString("pt-BR")}</span>
+            </div>
+            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 18, fontWeight: 700, marginBottom: inv.status === "fechada" || inv.status === "vencida" ? 10 : 0 }}>
+              {brl(inv.total)}
+              {inv.paid > 0 && <span style={{ fontSize: 11, color: C.sageSoft, fontWeight: 500, marginLeft: 8 }}>{brl(inv.paid)} já pago</span>}
+            </div>
+            {(inv.status === "fechada" || inv.status === "vencida") && (
+              <PayInvoiceRow card={card} invoice={inv} accounts={accounts} onPayInvoice={onPayInvoice} />
+            )}
+          </Card>
+        ))}
+      </div>
+    </ModalSheet>
+  );
+}
+function PayInvoiceRow({ card, invoice, accounts, onPayInvoice }) {
+  const others = accounts.filter((a) => a.id !== card.id);
+  const [fromAcc, setFromAcc] = useState((others[0] && others[0].id) || "");
+  const [val, setVal] = useState(Money.centsToInput(invoice.remaining));
+  return (
+    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+      <select value={fromAcc} onChange={(e) => setFromAcc(e.target.value)} style={{ ...selectStyle, flex: "1 1 140px" }}>
+        {others.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+      </select>
+      <input value={val} onChange={(e) => setVal(e.target.value)} inputMode="decimal" style={{ ...selectStyle, width: 100 }} />
+      <button
+        onClick={() => onPayInvoice(card.id, invoice.key, Money.parseToCents(val), fromAcc)}
+        style={{ ...ghostBtnStyle, padding: "8px 12px", color: C.sageSoft, borderColor: C.sage + "55" }}
+      >Pagar</button>
     </div>
   );
 }
@@ -1084,20 +1390,26 @@ function RecorrenciasTab({ recurring, accounts, customCategories, onAdd, onEdit,
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {recurring.map((r) => {
-            const info = catInfo(r.category, r.type === "receita", customCategories);
-            const acc = accInfo(r.accountId, accounts);
-            const Icon = info.icon;
+            const isTransfer = r.type === "transferencia";
+            const info = isTransfer ? null : catInfo(r.category, r.type === "receita", customCategories);
+            const acc = isTransfer ? null : accInfo(r.accountId, accounts);
+            const fromAcc = isTransfer ? accInfo(r.fromAccountId, accounts) : null;
+            const toAcc = isTransfer ? accInfo(r.toAccountId, accounts) : null;
+            const Icon = isTransfer ? ArrowRightLeft : info.icon;
+            const iconColor = isTransfer ? C.goldSoft : info.color;
             return (
               <Card key={r.id} style={{ padding: 14, display: "flex", alignItems: "center", gap: 12, opacity: r.active ? 1 : 0.55 }}>
-                <div style={{ width: 34, height: 34, borderRadius: 8, background: info.color + "22", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <Icon size={16} color={info.color} />
+                <div style={{ width: 34, height: 34, borderRadius: 8, background: iconColor + "22", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Icon size={16} color={iconColor} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 600 }}>{r.desc}</div>
-                  <div style={{ fontSize: 11.5, color: C.textFaint }}>Dia {r.dayOfMonth} · {acc.name} · {info.label}</div>
+                  <div style={{ fontSize: 11.5, color: C.textFaint }}>
+                    Dia {r.dayOfMonth} · {isTransfer ? `${fromAcc.name} → ${toAcc.name}` : `${acc.name} · ${info.label}`}
+                  </div>
                 </div>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, fontWeight: 600, color: r.type === "receita" ? C.sageSoft : C.brickSoft }}>
-                  {r.type === "receita" ? "+" : "-"}{brl(r.amount)}
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, fontWeight: 600, color: isTransfer ? C.goldSoft : (r.type === "receita" ? C.sageSoft : C.brickSoft) }}>
+                  {isTransfer ? "" : (r.type === "receita" ? "+" : "-")}{brl(r.amount)}
                 </div>
                 <div style={{ display: "flex", gap: 2 }}>
                   <button onClick={() => onLaunch(r)} title="Lançar agora" style={iconBtnStyle}><Bell size={13} /></button>
@@ -1115,7 +1427,7 @@ function RecorrenciasTab({ recurring, accounts, customCategories, onAdd, onEdit,
 }
 
 /* ------------------------------- Metas ------------------------------- */
-function MetasTab({ goals, setGoals, porCategoria, allCatsGasto, savingsGoals, onAddSavings, onContribute, onDeleteSavings }) {
+function MetasTab({ goals, setGoals, porCategoria, allCatsGasto, savingsGoals, accounts, transactions, onAddSavings, onContribute, onDeleteSavings }) {
   const [sub, setSub] = useState("limites");
   const spentMap = Object.fromEntries(porCategoria.map((c) => [c.id, c.value]));
   return (
@@ -1140,7 +1452,7 @@ function MetasTab({ goals, setGoals, porCategoria, allCatsGasto, savingsGoals, o
                   <span style={{ fontSize: 13.5, fontWeight: 500 }}>{c.label}</span>
                   {over && <AlertTriangle size={13} color={C.brick} style={{ marginLeft: "auto" }} />}
                 </div>
-                <input type="number" placeholder="Limite (R$)" value={goals[c.id] || ""} onChange={(e) => setGoals((prev) => ({ ...prev, [c.id]: parseFloat(e.target.value) || undefined }))} style={{ ...selectStyle, width: "100%", marginBottom: 8 }} />
+                <input type="text" inputMode="decimal" placeholder="Limite (R$)" defaultValue={goals[c.id] ? Money.centsToInput(goals[c.id]) : ""} key={goals[c.id] || "empty-" + c.id} onBlur={(e) => setGoals((prev) => ({ ...prev, [c.id]: Money.parseToCents(e.target.value) || undefined }))} style={{ ...selectStyle, width: "100%", marginBottom: 8 }} />
                 {limit > 0 && (
                   <>
                     <div style={{ height: 6, background: C.bgDeep, borderRadius: 4, overflow: "hidden" }}>
@@ -1167,22 +1479,26 @@ function MetasTab({ goals, setGoals, porCategoria, allCatsGasto, savingsGoals, o
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 12 }}>
               {savingsGoals.map((g) => {
-                const pct = g.target > 0 ? Math.min(100, Math.round((g.saved / g.target) * 100)) : 0;
+                const saved = savingsGoalSaved(g, accounts, transactions);
+                const pct = g.target > 0 ? Math.min(100, Math.round((saved / g.target) * 100)) : 0;
                 return (
                   <Card key={g.id} style={{ padding: 16 }}>
                     <div style={{ display: "flex", alignItems: "center", marginBottom: 6 }}>
                       <PiggyBank size={15} color={g.color} />
                       <span style={{ fontSize: 13.5, fontWeight: 600, marginLeft: 7 }}>{g.name}</span>
+                      <span style={{ fontSize: 9, color: C.textFaint, border: `1px solid ${C.border}`, borderRadius: 4, padding: "1px 5px", marginLeft: 8 }}>
+                        {g.mode === "reserva" ? "RESERVA REAL" : "ACOMPANHAMENTO"}
+                      </span>
                       <button onClick={() => onDeleteSavings(g.id)} style={{ ...iconBtnStyle, marginLeft: "auto" }}><Trash2 size={13} /></button>
                     </div>
                     <div style={{ height: 7, background: C.bgDeep, borderRadius: 4, overflow: "hidden", marginBottom: 6 }}>
                       <div style={{ height: "100%", width: `${pct}%`, background: g.color, borderRadius: 4 }} />
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontFamily: "'IBM Plex Mono', monospace", color: C.textMuted, marginBottom: 10 }}>
-                      <span>{brl(g.saved)}</span><span>{brl(g.target)} ({pct}%)</span>
+                      <span>{brl(saved)}</span><span>{brl(g.target)} ({pct}%)</span>
                     </div>
-                    <SavingsContribute goal={g} onContribute={onContribute} />
-                    {g.deadline && <div style={{ fontSize: 11, color: C.textFaint, marginTop: 6 }}>Prazo: {new Date(g.deadline + "T00:00:00").toLocaleDateString("pt-BR")}</div>}
+                    <SavingsContribute goal={g} accounts={accounts} onContribute={onContribute} />
+                    {g.deadline && <SavingsForecast goal={g} saved={saved} accounts={accounts} transactions={transactions} />}
                   </Card>
                 );
               })}
@@ -1193,19 +1509,56 @@ function MetasTab({ goals, setGoals, porCategoria, allCatsGasto, savingsGoals, o
     </div>
   );
 }
-function SavingsContribute({ goal, onContribute }) {
+function SavingsContribute({ goal, accounts, onContribute }) {
   const [val, setVal] = useState("");
+  const otherAccounts = accounts.filter((a) => a.id !== goal.accountId);
+  const [otherAcc, setOtherAcc] = useState((otherAccounts[0] && otherAccounts[0].id) || "");
+  const isReserva = goal.mode === "reserva";
+  function go(sign) {
+    const cents = Money.parseToCents(val);
+    if (cents > 0) { onContribute(goal.id, sign * cents, isReserva ? otherAcc : undefined); setVal(""); }
+  }
   return (
-    <div style={{ display: "flex", gap: 6 }}>
-      <input value={val} onChange={(e) => setVal(e.target.value)} placeholder="Valor" inputMode="decimal" style={{ ...selectStyle, flex: 1, marginBottom: 0 }} />
-      <button
-        onClick={() => { const n = parseFloat(String(val).replace(",", ".")); if (n > 0) { onContribute(goal.id, n); setVal(""); } }}
-        style={{ ...ghostBtnStyle, padding: "6px 10px", color: C.sageSoft, borderColor: C.sage + "55" }}
-      >+ guardar</button>
-      <button
-        onClick={() => { const n = parseFloat(String(val).replace(",", ".")); if (n > 0) { onContribute(goal.id, -n); setVal(""); } }}
-        style={{ ...ghostBtnStyle, padding: "6px 10px", color: C.brickSoft, borderColor: C.brick + "55" }}
-      >- retirar</button>
+    <div>
+      {isReserva && (
+        <select value={otherAcc} onChange={(e) => setOtherAcc(e.target.value)} style={{ ...selectStyle, width: "100%", marginBottom: 6 }}>
+          {otherAccounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+        </select>
+      )}
+      <div style={{ display: "flex", gap: 6 }}>
+        <input value={val} onChange={(e) => setVal(e.target.value)} placeholder="Valor" inputMode="decimal" style={{ ...selectStyle, flex: 1, marginBottom: 0 }} />
+        <button onClick={() => go(1)} style={{ ...ghostBtnStyle, padding: "6px 10px", color: C.sageSoft, borderColor: C.sage + "55" }}>+ guardar</button>
+        <button onClick={() => go(-1)} style={{ ...ghostBtnStyle, padding: "6px 10px", color: C.brickSoft, borderColor: C.brick + "55" }}>- retirar</button>
+      </div>
+    </div>
+  );
+}
+function SavingsForecast({ goal, saved, transactions }) {
+  const remaining = goal.target - saved;
+  const [dy, dm] = goal.deadline.split("-").map(Number);
+  const [ty, tm] = todayISO().split("-").map(Number);
+  const monthsLeft = Math.max(1, (dy - ty) * 12 + (dm - tm));
+  const ritmoNecessario = remaining > 0 ? Math.ceil(remaining / monthsLeft) : 0;
+
+  const history = goal.mode === "reserva"
+    ? transactions.filter((t) => t.type === "transferencia" && t.toAccountId === goal.accountId && t.status === "pago")
+    : (goal.contributions || []).filter((c) => c.amount > 0);
+  const cutoff = monthKey(addMonths(todayISO(), -3));
+  const last3 = history.filter((h) => monthKey(h.date) >= cutoff);
+  const avgMonthly = last3.length ? last3.reduce((s, h) => s + h.amount, 0) / 3 : 0;
+
+  let previsaoTxt = "sem ritmo suficiente pra prever ainda";
+  if (remaining <= 0) previsaoTxt = "meta concluída 🎉";
+  else if (avgMonthly > 0) {
+    const meses = Math.ceil(remaining / avgMonthly);
+    previsaoTxt = `~${meses} ${meses === 1 ? "mês" : "meses"} no ritmo atual`;
+  }
+
+  return (
+    <div style={{ fontSize: 11, color: C.textFaint, marginTop: 8, lineHeight: 1.6, borderTop: `1px solid ${C.borderSoft}`, paddingTop: 8 }}>
+      <div>Prazo: {new Date(goal.deadline + "T00:00:00").toLocaleDateString("pt-BR")}</div>
+      {remaining > 0 && <div>Ritmo necessário: {brl(ritmoNecessario)}/mês pra chegar lá</div>}
+      <div>Previsão: {previsaoTxt}</div>
     </div>
   );
 }
@@ -1221,7 +1574,7 @@ function AnalisesTab({ last6Months, previsaoChart, previsao, porNecessidade, tot
             <BarChart data={last6Months}>
               <CartesianGrid stroke={C.borderSoft} vertical={false} />
               <XAxis dataKey="label" stroke={C.textFaint} fontSize={11} tickLine={false} axisLine={{ stroke: C.border }} />
-              <YAxis stroke={C.textFaint} fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
+              <YAxis stroke={C.textFaint} fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${Math.round(v / 100 / 1000)}k`} />
               <Tooltip content={<ChartTooltip />} />
               <Legend wrapperStyle={{ fontSize: 12, color: C.textMuted }} />
               <Bar dataKey="receita" name="Receitas" fill={C.sage} radius={[3, 3, 0, 0]} />
@@ -1238,7 +1591,7 @@ function AnalisesTab({ last6Months, previsaoChart, previsao, porNecessidade, tot
             <LineChart data={previsaoChart}>
               <CartesianGrid stroke={C.borderSoft} vertical={false} />
               <XAxis dataKey="label" stroke={C.textFaint} fontSize={11} tickLine={false} axisLine={{ stroke: C.border }} />
-              <YAxis stroke={C.textFaint} fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
+              <YAxis stroke={C.textFaint} fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${Math.round(v / 100 / 1000)}k`} />
               <Tooltip content={<ChartTooltip />} />
               <Line type="monotone" dataKey="real" name="Real" stroke={C.gold} strokeWidth={2.5} dot={{ r: 3 }} connectNulls={false} />
               <Line type="monotone" dataKey="previsto" name="Previsto" stroke={C.goldSoft} strokeWidth={2} strokeDasharray="5 4" dot={{ r: 4 }} />
@@ -1261,7 +1614,7 @@ function AnalisesTab({ last6Months, previsaoChart, previsao, porNecessidade, tot
               </defs>
               <CartesianGrid stroke={C.borderSoft} vertical={false} />
               <XAxis dataKey="label" stroke={C.textFaint} fontSize={11} tickLine={false} axisLine={{ stroke: C.border }} />
-              <YAxis stroke={C.textFaint} fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
+              <YAxis stroke={C.textFaint} fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${Math.round(v / 100 / 1000)}k`} />
               <Tooltip content={<ChartTooltip />} />
               <Area type="monotone" dataKey="saldo" name="Patrimônio" stroke={C.gold} fill="url(#patGrad)" strokeWidth={2.5} />
             </AreaChart>
@@ -1412,26 +1765,35 @@ function TxForm({ initial, accounts, customCategories, onClose, onSave }) {
   const [type, setType] = useState(initial?.type || "gasto");
   const [date, setDate] = useState(initial?.date || todayISO());
   const [desc, setDesc] = useState(initial?.desc || "");
-  const [amount, setAmount] = useState(initial?.amount ?? "");
+  const [amount, setAmount] = useState(initial ? Money.centsToInput(initial.amount) : "");
   const [category, setCategory] = useState(initial?.category || CATS[0].id);
   const [necessity, setNecessity] = useState(initial?.necessity || "necessario");
   const [notes, setNotes] = useState(initial?.notes || "");
   const [accountId, setAccountId] = useState(initial?.accountId || (accounts[0] && accounts[0].id) || "");
+  const [fromAccountId, setFromAccountId] = useState(initial?.fromAccountId || (accounts[0] && accounts[0].id) || "");
+  const [toAccountId, setToAccountId] = useState(initial?.toAccountId || (accounts[1] && accounts[1].id) || "");
   const [status, setStatus] = useState(initial?.status || "pago");
   const [installments, setInstallments] = useState(1);
 
   const cats = type === "gasto" ? allGastoCats(customCategories) : REC_CATS;
   useEffect(() => {
-    if (!cats.find((c) => c.id === category)) setCategory(cats[0].id);
+    if (type !== "transferencia" && !cats.find((c) => c.id === category)) setCategory(cats[0].id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type]);
 
+  const amountCents = Money.parseToCents(amount);
+
   function submit(e) {
     e.preventDefault();
-    const val = parseFloat(String(amount).replace(",", "."));
-    if (!val || val <= 0 || !date || !accountId) return;
+    if (!amountCents || amountCents <= 0 || !date) return;
+    if (type === "transferencia") {
+      if (!fromAccountId || !toAccountId || fromAccountId === toAccountId) return;
+      onSave({ id: initial?.id, type, date, desc: desc.trim(), amount: amountCents, fromAccountId, toAccountId, status, notes: notes.trim(), installments: 1 });
+      return;
+    }
+    if (!accountId) return;
     onSave({
-      id: initial?.id, type, date, desc: desc.trim(), amount: val, category,
+      id: initial?.id, type, date, desc: desc.trim(), amount: amountCents, category,
       necessity: type === "gasto" ? necessity : undefined, notes: notes.trim(),
       accountId, status, installments: type === "gasto" && !isEdit ? installments : 1,
     });
@@ -1441,18 +1803,23 @@ function TxForm({ initial, accounts, customCategories, onClose, onSave }) {
     <ModalSheet title={isEdit ? "Editar lançamento" : "Novo lançamento"} onClose={onClose}>
       <form onSubmit={submit}>
         <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-          {["gasto", "receita"].map((t) => (
-            <button type="button" key={t} onClick={() => setType(t)} style={{
-              flex: 1, padding: "9px 0", borderRadius: 8, cursor: "pointer",
-              border: `1px solid ${type === t ? (t === "gasto" ? C.brick : C.sage) : C.border}`,
-              background: type === t ? (t === "gasto" ? C.brick + "22" : C.sage + "22") : "transparent",
-              color: type === t ? (t === "gasto" ? C.brickSoft : C.sageSoft) : C.textMuted, fontWeight: 600, fontSize: 13,
-            }}>{t === "gasto" ? "Gasto" : "Receita"}</button>
-          ))}
+          {["gasto", "receita", "transferencia"].map((t) => {
+            const active = type === t;
+            const tone = t === "gasto" ? C.brick : t === "receita" ? C.sage : C.gold;
+            const toneSoft = t === "gasto" ? C.brickSoft : t === "receita" ? C.sageSoft : C.goldSoft;
+            return (
+              <button type="button" key={t} onClick={() => setType(t)} style={{
+                flex: 1, padding: "9px 0", borderRadius: 8, cursor: "pointer",
+                border: `1px solid ${active ? tone : C.border}`,
+                background: active ? tone + "22" : "transparent",
+                color: active ? toneSoft : C.textMuted, fontWeight: 600, fontSize: 12.5,
+              }}>{t === "gasto" ? "Gasto" : t === "receita" ? "Receita" : "Transferência"}</button>
+            );
+          })}
         </div>
 
-        <FieldLabel>Descrição</FieldLabel>
-        <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Ex.: Almoço, Uber, aluguel..." style={fullInput} />
+        <FieldLabel>Descrição {type === "transferencia" ? "(opcional)" : ""}</FieldLabel>
+        <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder={type === "transferencia" ? "Ex.: Pagar fatura, guardar reserva..." : "Ex.: Almoço, Uber, aluguel..."} style={fullInput} />
 
         <div style={{ display: "flex", gap: 10 }}>
           <div style={{ flex: 1 }}>
@@ -1465,20 +1832,41 @@ function TxForm({ initial, accounts, customCategories, onClose, onSave }) {
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 10 }}>
-          <div style={{ flex: 1 }}>
-            <FieldLabel>Categoria</FieldLabel>
-            <select value={category} onChange={(e) => setCategory(e.target.value)} style={fullInput}>
-              {cats.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-            </select>
+        {type === "transferencia" ? (
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <FieldLabel>De</FieldLabel>
+              <select value={fromAccountId} onChange={(e) => setFromAccountId(e.target.value)} style={fullInput}>
+                {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <FieldLabel>Para</FieldLabel>
+              <select value={toAccountId} onChange={(e) => setToAccountId(e.target.value)} style={fullInput}>
+                {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+            </div>
           </div>
-          <div style={{ flex: 1 }}>
-            <FieldLabel>Conta</FieldLabel>
-            <select value={accountId} onChange={(e) => setAccountId(e.target.value)} style={fullInput}>
-              {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-            </select>
+        ) : (
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <FieldLabel>Categoria</FieldLabel>
+              <select value={category} onChange={(e) => setCategory(e.target.value)} style={fullInput}>
+                {cats.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <FieldLabel>Conta</FieldLabel>
+              <select value={accountId} onChange={(e) => setAccountId(e.target.value)} style={fullInput}>
+                {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+            </div>
           </div>
-        </div>
+        )}
+
+        {type === "transferencia" && fromAccountId && fromAccountId === toAccountId && (
+          <div style={{ fontSize: 11.5, color: C.brickSoft, marginTop: -2, marginBottom: 8 }}>A conta de origem e destino não podem ser iguais.</div>
+        )}
 
         <FieldLabel>Status</FieldLabel>
         <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
@@ -1487,7 +1875,7 @@ function TxForm({ initial, accounts, customCategories, onClose, onSave }) {
               flex: 1, padding: "8px 0", borderRadius: 7, cursor: "pointer", fontSize: 12, fontWeight: 600,
               border: `1.5px solid ${status === s ? C.gold : C.border}`, background: status === s ? C.gold + "1f" : "transparent",
               color: status === s ? C.gold : C.textMuted,
-            }}>{s === "pago" ? "Pago" : (type === "receita" ? "A receber" : "A pagar")}</button>
+            }}>{s === "pago" ? "Pago" : (type === "receita" ? "A receber" : type === "transferencia" ? "Agendada" : "A pagar")}</button>
           ))}
         </div>
 
@@ -1510,7 +1898,11 @@ function TxForm({ initial, accounts, customCategories, onClose, onSave }) {
           <>
             <FieldLabel>Parcelar em quantas vezes?</FieldLabel>
             <input type="number" min={1} max={48} value={installments} onChange={(e) => setInstallments(Math.max(1, parseInt(e.target.value, 10) || 1))} style={fullInput} />
-            {installments > 1 && <div style={{ fontSize: 11.5, color: C.textFaint, marginTop: -2, marginBottom: 8 }}>{installments}x de aproximadamente {brl((parseFloat(String(amount).replace(",", ".")) || 0) / installments)}</div>}
+            {installments > 1 && (
+              <div style={{ fontSize: 11.5, color: C.textFaint, marginTop: -2, marginBottom: 8 }}>
+                {installments}x — parcelas de {brl(Math.floor(amountCents / installments))} a {brl(Math.ceil(amountCents / installments))} (centavos restantes vão pras primeiras)
+              </div>
+            )}
           </>
         )}
 
@@ -1530,12 +1922,20 @@ function AccountForm({ initial, onClose, onSave }) {
   const [name, setName] = useState(initial?.name || "");
   const [type, setType] = useState(initial?.type || "carteira");
   const [color, setColor] = useState(initial?.color || SWATCHES[0]);
-  const [initialBalance, setInitialBalance] = useState(initial?.initialBalance ?? 0);
+  const [initialBalance, setInitialBalance] = useState(initial ? Money.centsToInput(initial.initialBalance) : "0");
+  const [limit, setLimit] = useState(initial?.limit ? Money.centsToInput(initial.limit) : "");
+  const [closingDay, setClosingDay] = useState(initial?.closingDay || 1);
+  const [dueDay, setDueDay] = useState(initial?.dueDay || 10);
 
   function submit(e) {
     e.preventDefault();
     if (!name.trim()) return;
-    onSave({ id: initial?.id, name: name.trim(), type, color, initialBalance: parseFloat(String(initialBalance).replace(",", ".")) || 0 });
+    const base = { id: initial?.id, name: name.trim(), type, color, initialBalance: Money.parseToCents(initialBalance) };
+    if (type === "cartao") {
+      onSave({ ...base, limit: Money.parseToCents(limit), closingDay: Math.min(28, Math.max(1, parseInt(closingDay, 10) || 1)), dueDay: Math.min(28, Math.max(1, parseInt(dueDay, 10) || 1)) });
+    } else {
+      onSave(base);
+    }
   }
   return (
     <ModalSheet title={isEdit ? "Editar conta" : "Nova conta"} onClose={onClose}>
@@ -1561,8 +1961,27 @@ function AccountForm({ initial, onClose, onSave }) {
             <button type="button" key={sw} onClick={() => setColor(sw)} style={{ width: 24, height: 24, borderRadius: "50%", background: sw, border: color === sw ? `2px solid ${C.text}` : "2px solid transparent", cursor: "pointer" }} />
           ))}
         </div>
-        <FieldLabel>Saldo inicial (R$)</FieldLabel>
-        <input value={initialBalance} onChange={(e) => setInitialBalance(e.target.value)} inputMode="decimal" style={fullInput} />
+        {type === "cartao" ? (
+          <>
+            <FieldLabel>Limite (R$)</FieldLabel>
+            <input value={limit} onChange={(e) => setLimit(e.target.value)} inputMode="decimal" placeholder="0,00" style={fullInput} required />
+            <div style={{ display: "flex", gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <FieldLabel>Dia de fechamento</FieldLabel>
+                <input type="number" min={1} max={28} value={closingDay} onChange={(e) => setClosingDay(e.target.value)} style={fullInput} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <FieldLabel>Dia de vencimento</FieldLabel>
+                <input type="number" min={1} max={28} value={dueDay} onChange={(e) => setDueDay(e.target.value)} style={fullInput} />
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <FieldLabel>Saldo inicial (R$)</FieldLabel>
+            <input value={initialBalance} onChange={(e) => setInitialBalance(e.target.value)} inputMode="decimal" style={fullInput} />
+          </>
+        )}
         <button type="submit" style={{ ...primaryBtnStyle, width: "100%", marginTop: 10, padding: "12px 0", fontSize: 14 }}>{isEdit ? "Salvar alterações" : "Criar conta"}</button>
       </form>
     </ModalSheet>
@@ -1573,40 +1992,53 @@ function RecurringForm({ initial, accounts, customCategories, onClose, onSave })
   const isEdit = !!initial;
   const [type, setType] = useState(initial?.type || "gasto");
   const [desc, setDesc] = useState(initial?.desc || "");
-  const [amount, setAmount] = useState(initial?.amount ?? "");
+  const [amount, setAmount] = useState(initial ? Money.centsToInput(initial.amount) : "");
   const [category, setCategory] = useState(initial?.category || CATS[0].id);
   const [necessity, setNecessity] = useState(initial?.necessity || "necessario");
   const [accountId, setAccountId] = useState(initial?.accountId || (accounts[0] && accounts[0].id) || "");
+  const [fromAccountId, setFromAccountId] = useState(initial?.fromAccountId || (accounts[0] && accounts[0].id) || "");
+  const [toAccountId, setToAccountId] = useState(initial?.toAccountId || (accounts[1] && accounts[1].id) || "");
   const [dayOfMonth, setDayOfMonth] = useState(initial?.dayOfMonth || 5);
   const [active, setActive] = useState(initial?.active ?? true);
 
   const cats = type === "gasto" ? allGastoCats(customCategories) : REC_CATS;
   useEffect(() => {
-    if (!cats.find((c) => c.id === category)) setCategory(cats[0].id);
+    if (type !== "transferencia" && !cats.find((c) => c.id === category)) setCategory(cats[0].id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type]);
 
   function submit(e) {
     e.preventDefault();
-    const val = parseFloat(String(amount).replace(",", "."));
-    if (!val || val <= 0 || !desc.trim() || !accountId) return;
-    onSave({ id: initial?.id, type, desc: desc.trim(), amount: val, category, necessity: type === "gasto" ? necessity : undefined, accountId, dayOfMonth: Math.min(28, Math.max(1, parseInt(dayOfMonth, 10) || 1)), active });
+    const cents = Money.parseToCents(amount);
+    if (!cents || cents <= 0 || !desc.trim()) return;
+    const base = { id: initial?.id, type, desc: desc.trim(), amount: cents, dayOfMonth: Math.min(28, Math.max(1, parseInt(dayOfMonth, 10) || 1)), active };
+    if (type === "transferencia") {
+      if (!fromAccountId || !toAccountId || fromAccountId === toAccountId) return;
+      onSave({ ...base, fromAccountId, toAccountId });
+    } else {
+      if (!accountId) return;
+      onSave({ ...base, category, necessity: type === "gasto" ? necessity : undefined, accountId });
+    }
   }
   return (
     <ModalSheet title={isEdit ? "Editar recorrência" : "Nova recorrência"} onClose={onClose}>
       <form onSubmit={submit}>
         <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-          {["gasto", "receita"].map((t) => (
-            <button type="button" key={t} onClick={() => setType(t)} style={{
-              flex: 1, padding: "9px 0", borderRadius: 8, cursor: "pointer",
-              border: `1px solid ${type === t ? (t === "gasto" ? C.brick : C.sage) : C.border}`,
-              background: type === t ? (t === "gasto" ? C.brick + "22" : C.sage + "22") : "transparent",
-              color: type === t ? (t === "gasto" ? C.brickSoft : C.sageSoft) : C.textMuted, fontWeight: 600, fontSize: 13,
-            }}>{t === "gasto" ? "Gasto" : "Receita"}</button>
-          ))}
+          {["gasto", "receita", "transferencia"].map((t) => {
+            const active2 = type === t;
+            const tone = t === "gasto" ? C.brick : t === "receita" ? C.sage : C.gold;
+            const toneSoft = t === "gasto" ? C.brickSoft : t === "receita" ? C.sageSoft : C.goldSoft;
+            return (
+              <button type="button" key={t} onClick={() => setType(t)} style={{
+                flex: 1, padding: "9px 0", borderRadius: 8, cursor: "pointer",
+                border: `1px solid ${active2 ? tone : C.border}`, background: active2 ? tone + "22" : "transparent",
+                color: active2 ? toneSoft : C.textMuted, fontWeight: 600, fontSize: 12.5,
+              }}>{t === "gasto" ? "Gasto" : t === "receita" ? "Receita" : "Transferência"}</button>
+            );
+          })}
         </div>
         <FieldLabel>Descrição</FieldLabel>
-        <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Ex.: Netflix, Salário, Aluguel" style={fullInput} required />
+        <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder={type === "transferencia" ? "Ex.: Investir todo mês, pagar fatura" : "Ex.: Netflix, Salário, Aluguel"} style={fullInput} required />
         <div style={{ display: "flex", gap: 10 }}>
           <div style={{ flex: 1 }}>
             <FieldLabel>Valor (R$)</FieldLabel>
@@ -1617,20 +2049,37 @@ function RecurringForm({ initial, accounts, customCategories, onClose, onSave })
             <input type="number" min={1} max={28} value={dayOfMonth} onChange={(e) => setDayOfMonth(e.target.value)} style={fullInput} />
           </div>
         </div>
-        <div style={{ display: "flex", gap: 10 }}>
-          <div style={{ flex: 1 }}>
-            <FieldLabel>Categoria</FieldLabel>
-            <select value={category} onChange={(e) => setCategory(e.target.value)} style={fullInput}>
-              {cats.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-            </select>
+        {type === "transferencia" ? (
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <FieldLabel>De</FieldLabel>
+              <select value={fromAccountId} onChange={(e) => setFromAccountId(e.target.value)} style={fullInput}>
+                {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <FieldLabel>Para</FieldLabel>
+              <select value={toAccountId} onChange={(e) => setToAccountId(e.target.value)} style={fullInput}>
+                {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+            </div>
           </div>
-          <div style={{ flex: 1 }}>
-            <FieldLabel>Conta</FieldLabel>
-            <select value={accountId} onChange={(e) => setAccountId(e.target.value)} style={fullInput}>
-              {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-            </select>
+        ) : (
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <FieldLabel>Categoria</FieldLabel>
+              <select value={category} onChange={(e) => setCategory(e.target.value)} style={fullInput}>
+                {cats.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <FieldLabel>Conta</FieldLabel>
+              <select value={accountId} onChange={(e) => setAccountId(e.target.value)} style={fullInput}>
+                {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+            </div>
           </div>
-        </div>
+        )}
         {type === "gasto" && (
           <>
             <FieldLabel>Necessidade padrão</FieldLabel>
@@ -1659,18 +2108,38 @@ function SavingsGoalForm({ onClose, onSave }) {
   const [target, setTarget] = useState("");
   const [deadline, setDeadline] = useState("");
   const [color, setColor] = useState(SWATCHES[0]);
+  const [mode, setMode] = useState("virtual");
 
   function submit(e) {
     e.preventDefault();
-    const val = parseFloat(String(target).replace(",", "."));
-    if (!name.trim() || !val || val <= 0) return;
-    onSave({ name: name.trim(), target: val, deadline: deadline || undefined, color });
+    const cents = Money.parseToCents(target);
+    if (!name.trim() || !cents || cents <= 0) return;
+    onSave({ name: name.trim(), target: cents, deadline: deadline || undefined, color, mode });
   }
   return (
     <ModalSheet title="Nova meta de poupança" onClose={onClose}>
       <form onSubmit={submit}>
         <FieldLabel>Nome da meta</FieldLabel>
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Viagem, Reserva de emergência" style={fullInput} required />
+        <FieldLabel>Como quer acompanhar?</FieldLabel>
+        <div style={{ display: "flex", gap: 6, marginBottom: 4 }}>
+          <button type="button" onClick={() => setMode("virtual")} style={{
+            flex: 1, padding: "9px 6px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600,
+            border: `1.5px solid ${mode === "virtual" ? C.gold : C.border}`, background: mode === "virtual" ? C.gold + "1f" : "transparent",
+            color: mode === "virtual" ? C.gold : C.textMuted,
+          }}>Só acompanhamento</button>
+          <button type="button" onClick={() => setMode("reserva")} style={{
+            flex: 1, padding: "9px 6px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600,
+            border: `1.5px solid ${mode === "reserva" ? C.gold : C.border}`, background: mode === "reserva" ? C.gold + "1f" : "transparent",
+            color: mode === "reserva" ? C.gold : C.textMuted,
+          }}>Reserva real</button>
+        </div>
+        <div style={{ fontSize: 11, color: C.textFaint, lineHeight: 1.5, marginBottom: 10, display: "flex", gap: 6 }}>
+          <Info size={12} style={{ flexShrink: 0, marginTop: 2 }} />
+          {mode === "virtual"
+            ? "Só um número que você atualiza manualmente — não mexe em conta nenhuma."
+            : "Cria uma conta dedicada de verdade. Cada aporte é uma transferência real de outra conta, então o dinheiro nunca é contado duas vezes."}
+        </div>
         <FieldLabel>Valor alvo (R$)</FieldLabel>
         <input value={target} onChange={(e) => setTarget(e.target.value)} inputMode="decimal" style={fullInput} required />
         <FieldLabel>Prazo (opcional)</FieldLabel>
