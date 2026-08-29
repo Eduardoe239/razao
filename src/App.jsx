@@ -140,6 +140,15 @@ function savingsGoalSaved(goal, accounts, transactions) {
   }
   return (goal.contributions || []).reduce((s, c) => s + c.amount, 0);
 }
+function budgetForMonth(key, budgetSettings) {
+  if (!budgetSettings) return null;
+  if (budgetSettings.overrides && budgetSettings.overrides[key] != null) return budgetSettings.overrides[key];
+  return budgetSettings.defaultMonthly ?? null;
+}
+function daysInMonth(key) {
+  const [y, m] = key.split("-").map(Number);
+  return new Date(y, m, 0).getDate();
+}
 function accountBalance(accountId, transactions, initialBalance) {
   let bal = initialBalance;
   transactions.forEach((t) => {
@@ -210,6 +219,58 @@ function cardInvoices(card, transactions, aroundKey, monthsBack = 3, monthsFwd =
     if (closed) status = paid >= total && total > 0 ? "paga" : (todayK > due ? "vencida" : "fechada");
     return { key, label: invoiceLabel(key), purchases, total, paid, due, status, remaining: Math.max(0, total - paid) };
   });
+}
+
+/* ------------------------------- central de compromissos -------------------------------
+ * Junta tudo que já se sabe que vai acontecer financeiramente nos próximos meses:
+ *  a) pendências já lançadas (parcelas futuras, contas a pagar/receber manuais)
+ *  b) ocorrências futuras de recorrências ativas que ainda não viraram lançamento
+ *     (a geração automática só cobre o mês corrente — aqui projetamos os seguintes)
+ *  c) faturas de cartão fechadas/vencidas ainda não pagas, e a fatura aberta corrente
+ * Isso NÃO cria lançamentos — é só uma projeção de leitura.
+ * ----------------------------------------------------------------------------------- */
+function buildCommitments(transactions, recurring, accounts, customCategories, monthsAhead) {
+  const today = todayISO();
+  const todayKey = monthKey(today);
+  const items = [];
+
+  transactions
+    .filter((t) => t.status === "pendente" && t.date >= today)
+    .forEach((t) => {
+      const isTransfer = t.type === "transferencia";
+      items.push({
+        id: t.id, date: t.date, amount: t.amount, kind: t.type,
+        label: isTransfer ? (t.desc || "Transferência") : (t.desc || catInfo(t.category, t.type === "receita", customCategories).label),
+        source: t.installmentTotal ? `Parcela ${t.installmentIndex}/${t.installmentTotal}` : (t.recurringId ? "Recorrência" : "Pendência"),
+      });
+    });
+
+  recurring.filter((r) => r.active).forEach((r) => {
+    for (let i = 1; i <= monthsAhead; i++) {
+      const [ty, tm] = todayKey.split("-").map(Number);
+      const dt = new Date(ty, tm - 1 + i, 1);
+      const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
+      const day = Math.min(r.dayOfMonth || 1, 28);
+      const date = `${key}-${String(day).padStart(2, "0")}`;
+      const already = transactions.some((t) => t.recurringId === r.id && monthKey(t.date) === key);
+      if (!already) {
+        items.push({ id: `${r.id}-${key}`, date, amount: r.amount, kind: r.type, label: r.desc, source: "Recorrência (futura)" });
+      }
+    }
+  });
+
+  accounts.filter((a) => a.type === "cartao").forEach((card) => {
+    const invoices = cardInvoices(card, transactions, todayKey, 0, monthsAhead);
+    invoices.forEach((inv) => {
+      if ((inv.status === "fechada" || inv.status === "vencida") && inv.remaining > 0) {
+        items.push({ id: `fatura-${card.id}-${inv.key}`, date: inv.due, amount: inv.remaining, kind: "gasto", label: `Fatura ${card.name}`, source: inv.status === "vencida" ? "Fatura vencida" : "Fatura fechada" });
+      } else if (inv.status === "aberta" && inv.total > 0) {
+        items.push({ id: `fatura-aberta-${card.id}-${inv.key}`, date: inv.due, amount: inv.total, kind: "gasto", label: `Fatura ${card.name} (em aberto)`, source: "Fatura em formação" });
+      }
+    });
+  });
+
+  return items.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 }
 
 function downloadFile(content, filename, mime) {
@@ -347,6 +408,10 @@ export default function App() {
   const [recurring, setRecurring] = useState([]);
   const [savingsGoals, setSavingsGoals] = useState([]);
   const [customCategories, setCustomCategories] = useState([]);
+  // Orçamento geral: um teto pro mês inteiro (não por categoria). "defaultMonthly"
+  // vale pra todo mês; "overrides" permite um valor específico pra um mês (ex.:
+  // mês de viagem, mês de 13º).
+  const [budgetSettings, setBudgetSettings] = useState({ defaultMonthly: null, overrides: {} });
   const [monthCursor, setMonthCursor] = useState(monthKey(todayISO()));
 
   const [showForm, setShowForm] = useState(false);
@@ -408,6 +473,7 @@ export default function App() {
           setRecurring(recurringData);
           setSavingsGoals(savingsData);
           setCustomCategories(p.customCategories || []);
+          setBudgetSettings(p.budgetSettings || { defaultMonthly: null, overrides: {} });
         } else {
           setAccounts([{ id: uid(), name: "Carteira", type: "carteira", color: "#c9a227", initialBalance: 0 }]);
         }
@@ -424,12 +490,12 @@ export default function App() {
     if (!loaded.current) return;
     (async () => {
       try {
-        await window.storage.set("financas:data", JSON.stringify({ moneyUnit: "cents", transactions, goals, profileName, accounts, recurring, savingsGoals, customCategories }), false);
+        await window.storage.set("financas:data", JSON.stringify({ moneyUnit: "cents", transactions, goals, profileName, accounts, recurring, savingsGoals, customCategories, budgetSettings }), false);
       } catch (e) {
         console.error("falha ao salvar", e);
       }
     })();
-  }, [transactions, goals, profileName, accounts, recurring, savingsGoals, customCategories]);
+  }, [transactions, goals, profileName, accounts, recurring, savingsGoals, customCategories, budgetSettings]);
 
   // gera lançamentos recorrentes do mês atual, uma única vez por sessão
   useEffect(() => {
@@ -633,6 +699,19 @@ export default function App() {
   }
 
   /* ---- categorias personalizadas ---- */
+  /* ---- orçamento geral ---- */
+  function setDefaultBudget(cents) {
+    setBudgetSettings((prev) => ({ ...prev, defaultMonthly: cents || null }));
+  }
+  function setBudgetOverride(key, cents) {
+    setBudgetSettings((prev) => {
+      const overrides = { ...prev.overrides };
+      if (cents) overrides[key] = cents;
+      else delete overrides[key];
+      return { ...prev, overrides };
+    });
+  }
+
   function addCustomCategory(cat) {
     setCustomCategories((prev) => [...prev, { ...cat, id: "custom_" + uid() }]);
     showToast("Categoria criada.");
@@ -671,7 +750,7 @@ export default function App() {
     showToast("CSV exportado.");
   }
   function exportBackup() {
-    downloadFile(JSON.stringify({ moneyUnit: "cents", transactions, goals, profileName, accounts, recurring, savingsGoals, customCategories }, null, 2), "backup-financas.json", "application/json");
+    downloadFile(JSON.stringify({ moneyUnit: "cents", transactions, goals, profileName, accounts, recurring, savingsGoals, customCategories, budgetSettings }, null, 2), "backup-financas.json", "application/json");
     showToast("Backup exportado.");
   }
   function importBackup(e) {
@@ -707,6 +786,7 @@ export default function App() {
         setRecurring(recurringData);
         setSavingsGoals(savingsData);
         setCustomCategories(data.customCategories || []);
+        setBudgetSettings(data.budgetSettings || { defaultMonthly: null, overrides: {} });
         showToast("Backup importado.");
       } catch (err) {
         showToast("Arquivo inválido.");
@@ -774,12 +854,40 @@ export default function App() {
     return { valor: Math.max(0, media + trend * 0.3), media };
   }, [last6Months]);
 
-  const previsaoChart = useMemo(() => {
+  const nextMonthKey = useMemo(() => {
     const [y, m] = monthCursor.split("-").map(Number);
     const nextDate = new Date(y, m, 1);
-    const nextKey = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, "0")}`;
-    return [...last6Months.map((m) => ({ label: m.label, real: m.gasto, previsto: null })), { label: monthLabel(nextKey) + " *", real: null, previsto: previsao ? previsao.valor : null }];
-  }, [last6Months, previsao, monthCursor]);
+    return `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, "0")}`;
+  }, [monthCursor]);
+
+  // Previsão robusta = comprometido conhecido (parcelas futuras, recorrências,
+  // faturas de cartão — tudo que já se SABE que vai acontecer) + uma estimativa
+  // do gasto "do dia a dia" (o que sobra do histórico depois de tirar o que já
+  // era estruturado). É mais confiável que só extrapolar a média dos últimos meses,
+  // porque parte do que vem por aí já é fato, não estimativa.
+  const previsaoRobusta = useMemo(() => {
+    const commitments = buildCommitments(transactions, recurring, accounts, customCategories, 1);
+    const comprometido = commitments.filter((i) => i.kind === "gasto" && monthKey(i.date) === nextMonthKey).reduce((s, i) => s + i.amount, 0);
+
+    const monthsWithData = last6Months.filter((m) => m.gasto > 0).slice(-3);
+    let variavel = 0;
+    if (monthsWithData.length) {
+      const variaveisPorMes = monthsWithData.map((m) => {
+        const estruturado = transactions
+          .filter((t) => t.type === "gasto" && monthKey(t.date) === m.key && (t.recurringId || t.installmentTotal))
+          .reduce((s, t) => s + t.amount, 0);
+        return Math.max(0, m.gasto - estruturado);
+      });
+      variavel = Math.round(variaveisPorMes.reduce((a, b) => a + b, 0) / variaveisPorMes.length);
+    }
+    if (comprometido === 0 && variavel === 0) return null;
+    return { comprometido, variavel, total: comprometido + variavel };
+  }, [transactions, recurring, accounts, customCategories, nextMonthKey, last6Months]);
+
+  const previsaoChart = useMemo(() => {
+    const valor = previsaoRobusta ? previsaoRobusta.total : (previsao ? previsao.valor : null);
+    return [...last6Months.map((m) => ({ label: m.label, real: m.gasto, previsto: null })), { label: monthLabel(nextMonthKey) + " *", real: null, previsto: valor }];
+  }, [last6Months, previsao, previsaoRobusta, nextMonthKey]);
 
   const patrimonioEvolucao = useMemo(() => {
     const startBalance = accounts.reduce((s, a) => s + a.initialBalance, 0);
@@ -833,6 +941,7 @@ export default function App() {
     { id: "transacoes", label: "Lançamentos", icon: List },
     { id: "contas", label: "Contas", icon: Landmark },
     { id: "recorrencias", label: "Recorrências", icon: Repeat },
+    { id: "compromissos", label: "Compromissos", icon: CalendarClock },
     { id: "metas", label: "Metas", icon: Target },
     { id: "analises", label: "Análises", icon: LineChartIcon },
     { id: "config", label: "Ajustes", icon: Settings },
@@ -912,12 +1021,13 @@ export default function App() {
             saldoRealizado={saldoRealizado} saldoPrevisto={saldoPrevisto}
             gastoPendenteMes={gastoPendenteMes} receitaPendenteMes={receitaPendenteMes}
             porCategoria={porCategoria} necessarioPct={necessarioPct} desnecessarioPct={desnecessarioPct}
-            gastosMes={gastosMes} previsao={previsao} healthScore={healthScore}
+            gastosMes={gastosMes} previsao={previsao} previsaoRobusta={previsaoRobusta} healthScore={healthScore}
             deltaGasto={deltaGasto} deltaReceita={deltaReceita}
             transactions={filteredTx.slice(0, 5)} accounts={accounts} customCategories={customCategories}
             onEdit={(t) => { setEditing(t); setShowForm(true); }} onDelete={deleteTransaction}
             hasAny={transactions.length > 0}
             pendentes={pendentes} onTogglePaid={togglePaid}
+            budget={budgetForMonth(monthCursor, budgetSettings)} monthCursor={monthCursor}
           />
         )}
 
@@ -950,18 +1060,24 @@ export default function App() {
           />
         )}
 
+        {tab === "compromissos" && (
+          <CompromissosTab transactions={transactions} recurring={recurring} accounts={accounts} customCategories={customCategories} />
+        )}
+
         {tab === "metas" && (
           <MetasTab
             goals={goals} setGoals={setGoals} porCategoria={porCategoria} allCatsGasto={allCatsGasto}
             savingsGoals={savingsGoals} accounts={accounts} transactions={transactions}
             onAddSavings={() => setShowSavingsForm(true)}
             onContribute={contributeSavings} onDeleteSavings={deleteSavingsGoal}
+            budgetSettings={budgetSettings} monthCursor={monthCursor} totalGasto={totalGasto}
+            onSetDefaultBudget={setDefaultBudget} onSetBudgetOverride={setBudgetOverride}
           />
         )}
 
         {tab === "analises" && (
           <AnalisesTab
-            last6Months={last6Months} previsaoChart={previsaoChart} previsao={previsao}
+            last6Months={last6Months} previsaoChart={previsaoChart} previsao={previsao} previsaoRobusta={previsaoRobusta}
             porNecessidade={porNecessidade} totalGasto={totalGasto} patrimonioEvolucao={patrimonioEvolucao}
           />
         )}
@@ -973,6 +1089,7 @@ export default function App() {
             onWipe={async () => {
               const freshAccount = { id: uid(), name: "Carteira", type: "carteira", color: "#c9a227", initialBalance: 0 };
               setTransactions([]); setGoals({}); setRecurring([]); setSavingsGoals([]); setCustomCategories([]);
+              setBudgetSettings({ defaultMonthly: null, overrides: {} });
               setAccounts([freshAccount]); setProfileName("Meu razão");
               try { await window.storage.delete("financas:data", false); } catch (e) { /* segue mesmo se a chave não existir */ }
               showToast("Todos os dados foram apagados — contas e perfil inclusos.");
@@ -1006,7 +1123,7 @@ export default function App() {
 }
 
 /* ------------------------------- Painel ------------------------------- */
-function PainelTab({ totalGasto, totalReceita, saldoRealizado, saldoPrevisto, gastoPendenteMes, receitaPendenteMes, porCategoria, necessarioPct, desnecessarioPct, gastosMes, previsao, healthScore, deltaGasto, deltaReceita, transactions, accounts, customCategories, onEdit, onDelete, hasAny, pendentes, onTogglePaid }) {
+function PainelTab({ totalGasto, totalReceita, saldoRealizado, saldoPrevisto, gastoPendenteMes, receitaPendenteMes, porCategoria, necessarioPct, desnecessarioPct, gastosMes, previsao, previsaoRobusta, healthScore, deltaGasto, deltaReceita, transactions, accounts, customCategories, onEdit, onDelete, hasAny, pendentes, onTogglePaid, budget, monthCursor }) {
   if (!hasAny) {
     return (
       <Card style={{ padding: "48px 24px", textAlign: "center" }}>
@@ -1045,8 +1162,26 @@ function PainelTab({ totalGasto, totalReceita, saldoRealizado, saldoPrevisto, ga
           accent={saldoPrevisto >= 0 ? C.sageSoft : C.brickSoft}
           sub="realizado + pendências do mês"
         />
-        <StatBlock label="Previsão próx. mês" value={previsao ? brl(previsao.valor) : "—"} sub={previsao ? "com base nos últimos meses" : "sem histórico suficiente"} accent={C.goldSoft} />
+        <StatBlock
+          label="Previsão próx. mês"
+          value={previsaoRobusta ? brl(previsaoRobusta.total) : (previsao ? brl(previsao.valor) : "—")}
+          sub={previsaoRobusta ? `${brl(previsaoRobusta.comprometido)} já sabido + ${brl(previsaoRobusta.variavel)} estimado` : (previsao ? "com base nos últimos meses" : "sem histórico suficiente")}
+          accent={C.goldSoft}
+        />
       </div>
+
+      {budget != null && (
+        <Card style={{ padding: 18, marginBottom: 16 }}>
+          <SectionTitle icon={Target}>Orçamento do mês</SectionTitle>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 8, marginBottom: 6 }}>
+            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 20, fontWeight: 700, color: totalGasto > budget ? C.brickSoft : C.text }}>{brl(totalGasto)}</span>
+            <span style={{ fontSize: 12, color: C.textFaint }}>de {brl(budget)} ({budget ? Math.min(100, Math.round((totalGasto / budget) * 100)) : 0}%)</span>
+          </div>
+          <div style={{ height: 7, background: C.bgDeep, borderRadius: 4, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${budget ? Math.min(100, Math.round((totalGasto / budget) * 100)) : 0}%`, background: totalGasto > budget ? C.brick : C.sage, borderRadius: 4 }} />
+          </div>
+        </Card>
+      )}
 
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
         <Card style={{ padding: 18, flex: "1 1 260px" }}>
@@ -1427,15 +1562,104 @@ function RecorrenciasTab({ recurring, accounts, customCategories, onAdd, onEdit,
 }
 
 /* ------------------------------- Metas ------------------------------- */
-function MetasTab({ goals, setGoals, porCategoria, allCatsGasto, savingsGoals, accounts, transactions, onAddSavings, onContribute, onDeleteSavings }) {
+/* --------------------------- Central de compromissos --------------------------- */
+function CompromissosTab({ transactions, recurring, accounts, customCategories }) {
+  const [monthsAhead, setMonthsAhead] = useState(3);
+  const items = useMemo(() => buildCommitments(transactions, recurring, accounts, customCategories, monthsAhead), [transactions, recurring, accounts, customCategories, monthsAhead]);
+
+  const totalGasto = items.filter((i) => i.kind === "gasto").reduce((s, i) => s + i.amount, 0);
+  const totalReceita = items.filter((i) => i.kind === "receita").reduce((s, i) => s + i.amount, 0);
+
+  const groups = useMemo(() => {
+    const map = {};
+    items.forEach((i) => {
+      const key = monthKey(i.date);
+      if (!map[key]) map[key] = [];
+      map[key].push(i);
+    });
+    return Object.entries(map).sort(([a], [b]) => (a < b ? -1 : 1));
+  }, [items]);
+
+  const KIND_INFO = {
+    gasto: { color: C.brickSoft, sign: "-" },
+    receita: { color: C.sageSoft, sign: "+" },
+    transferencia: { color: C.goldSoft, sign: "" },
+  };
+
+  return (
+    <div>
+      <Card style={{ padding: 18, marginBottom: 16 }}>
+        <SectionTitle icon={CalendarClock} right={
+          <select value={monthsAhead} onChange={(e) => setMonthsAhead(parseInt(e.target.value, 10))} style={selectStyle}>
+            <option value={1}>Próximo mês</option>
+            <option value={3}>Próximos 3 meses</option>
+            <option value={6}>Próximos 6 meses</option>
+          </select>
+        }>
+          O que já está previsto
+        </SectionTitle>
+        <div style={{ display: "flex", gap: 20, marginTop: 12, flexWrap: "wrap" }}>
+          <div>
+            <div style={{ fontSize: 11, color: C.textFaint, textTransform: "uppercase" }}>Comprometido (saída)</div>
+            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 20, fontWeight: 700, color: C.brickSoft }}>{brl(totalGasto)}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: C.textFaint, textTransform: "uppercase" }}>Esperado (entrada)</div>
+            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 20, fontWeight: 700, color: C.sageSoft }}>{brl(totalReceita)}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: C.textFaint, textTransform: "uppercase" }}>Saldo projetado</div>
+            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 20, fontWeight: 700, color: totalReceita - totalGasto >= 0 ? C.sageSoft : C.brickSoft }}>{brl(totalReceita - totalGasto)}</div>
+          </div>
+        </div>
+        <div style={{ fontSize: 11, color: C.textFaint, marginTop: 10 }}>
+          Inclui parcelas futuras, recorrências ainda não lançadas e faturas de cartão em aberto ou fechadas. Não conta como lançamento até acontecer de verdade.
+        </div>
+      </Card>
+
+      {groups.length === 0 ? (
+        <div style={{ color: C.textFaint, fontSize: 13, textAlign: "center", padding: "24px 0" }}>Nada previsto pra esse período — sem parcelas, recorrências ou faturas pendentes.</div>
+      ) : (
+        groups.map(([key, groupItems]) => (
+          <div key={key} style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 12.5, color: C.textMuted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 8px 2px" }}>{monthLabel(key)}</div>
+            <Card style={{ padding: 6 }}>
+              {groupItems.map((i) => {
+                const info = KIND_INFO[i.kind] || KIND_INFO.transferencia;
+                return (
+                  <div key={i.id} className="rowhover" style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 10px", borderBottom: `1px solid ${C.borderSoft}` }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 500 }}>{i.label}</div>
+                      <div style={{ fontSize: 11, color: C.textFaint, marginTop: 1 }}>
+                        {new Date(i.date + "T00:00:00").toLocaleDateString("pt-BR")} · {i.source}
+                      </div>
+                    </div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13.5, fontWeight: 600, color: info.color }}>{info.sign}{brl(i.amount)}</div>
+                  </div>
+                );
+              })}
+            </Card>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+function MetasTab({ goals, setGoals, porCategoria, allCatsGasto, savingsGoals, accounts, transactions, onAddSavings, onContribute, onDeleteSavings, budgetSettings, monthCursor, totalGasto, onSetDefaultBudget, onSetBudgetOverride }) {
   const [sub, setSub] = useState("limites");
   const spentMap = Object.fromEntries(porCategoria.map((c) => [c.id, c.value]));
   return (
     <div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
         <button onClick={() => setSub("limites")} style={{ ...ghostBtnStyle, background: sub === "limites" ? C.surfaceRaised : "transparent", color: sub === "limites" ? C.text : C.textMuted }}>Limites por categoria</button>
         <button onClick={() => setSub("poupanca")} style={{ ...ghostBtnStyle, background: sub === "poupanca" ? C.surfaceRaised : "transparent", color: sub === "poupanca" ? C.text : C.textMuted }}>Metas de poupança</button>
+        <button onClick={() => setSub("orcamento")} style={{ ...ghostBtnStyle, background: sub === "orcamento" ? C.surfaceRaised : "transparent", color: sub === "orcamento" ? C.text : C.textMuted }}>Orçamento geral</button>
       </div>
+
+      {sub === "orcamento" && (
+        <OrcamentoGeral budgetSettings={budgetSettings} monthCursor={monthCursor} totalGasto={totalGasto} onSetDefaultBudget={onSetDefaultBudget} onSetBudgetOverride={onSetBudgetOverride} />
+      )}
 
       {sub === "limites" && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))", gap: 12 }}>
@@ -1509,6 +1733,74 @@ function MetasTab({ goals, setGoals, porCategoria, allCatsGasto, savingsGoals, a
     </div>
   );
 }
+function OrcamentoGeral({ budgetSettings, monthCursor, totalGasto, onSetDefaultBudget, onSetBudgetOverride }) {
+  const defaultVal = budgetSettings.defaultMonthly;
+  const overrideVal = budgetSettings.overrides?.[monthCursor];
+  const effective = overrideVal ?? defaultVal;
+  const [defaultInput, setDefaultInput] = useState(defaultVal ? Money.centsToInput(defaultVal) : "");
+  const [useOverride, setUseOverride] = useState(overrideVal != null);
+  const [overrideInput, setOverrideInput] = useState(overrideVal ? Money.centsToInput(overrideVal) : "");
+
+  const isCurrentMonth = monthCursor === monthKey(todayISO());
+  const pct = effective ? Math.min(100, Math.round((totalGasto / effective) * 100)) : 0;
+  const over = effective != null && totalGasto > effective;
+  const remaining = effective != null ? effective - totalGasto : null;
+
+  let ritmoTxt = null;
+  if (isCurrentMonth && effective != null) {
+    const today = new Date();
+    const diasRestantes = Math.max(1, daysInMonth(monthCursor) - today.getDate() + 1);
+    if (remaining > 0) ritmoTxt = `Dá pra gastar ${brl(Math.floor(remaining / diasRestantes))}/dia até o fim do mês sem estourar.`;
+    else ritmoTxt = `Já passou do orçamento em ${brl(-remaining)}.`;
+  }
+
+  return (
+    <div>
+      <Card style={{ padding: 18, marginBottom: 16 }}>
+        <SectionTitle icon={Gauge}>Orçamento padrão mensal</SectionTitle>
+        <div style={{ fontSize: 12, color: C.textFaint, margin: "6px 0 10px" }}>Um teto único pro mês inteiro, além dos limites por categoria. Vale pra todo mês, a não ser que você defina um valor específico abaixo.</div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <input value={defaultInput} onChange={(e) => setDefaultInput(e.target.value)} placeholder="0,00" inputMode="decimal" style={{ ...selectStyle, flex: 1 }} />
+          <button onClick={() => onSetDefaultBudget(Money.parseToCents(defaultInput))} style={{ ...ghostBtnStyle, padding: "8px 14px" }}>Salvar</button>
+          {defaultVal != null && (
+            <button onClick={() => { setDefaultInput(""); onSetDefaultBudget(null); }} style={{ ...ghostBtnStyle, padding: "8px 10px", color: C.brickSoft, borderColor: C.brick + "55" }}><Trash2 size={13} /></button>
+          )}
+        </div>
+      </Card>
+
+      <Card style={{ padding: 18, marginBottom: 16 }}>
+        <SectionTitle icon={CalendarClock}>Valor específico pra {monthLabel(monthCursor)}</SectionTitle>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: C.textMuted, margin: "8px 0", cursor: "pointer" }}>
+          <input type="checkbox" checked={useOverride} onChange={(e) => { setUseOverride(e.target.checked); if (!e.target.checked) onSetBudgetOverride(monthCursor, null); }} />
+          Usar um valor diferente do padrão neste mês
+        </label>
+        {useOverride && (
+          <div style={{ display: "flex", gap: 8 }}>
+            <input value={overrideInput} onChange={(e) => setOverrideInput(e.target.value)} placeholder="0,00" inputMode="decimal" style={{ ...selectStyle, flex: 1 }} />
+            <button onClick={() => onSetBudgetOverride(monthCursor, Money.parseToCents(overrideInput))} style={{ ...ghostBtnStyle, padding: "8px 14px" }}>Salvar</button>
+          </div>
+        )}
+      </Card>
+
+      {effective != null ? (
+        <Card style={{ padding: 18 }}>
+          <SectionTitle icon={Target}>Progresso — {monthLabel(monthCursor)}</SectionTitle>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 10, marginBottom: 6 }}>
+            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 22, fontWeight: 700, color: over ? C.brickSoft : C.text }}>{brl(totalGasto)}</span>
+            <span style={{ fontSize: 12, color: C.textFaint }}>de {brl(effective)} ({pct}%)</span>
+          </div>
+          <div style={{ height: 8, background: C.bgDeep, borderRadius: 4, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${pct}%`, background: over ? C.brick : C.sage, borderRadius: 4 }} />
+          </div>
+          {ritmoTxt && <div style={{ fontSize: 12.5, color: over ? C.brickSoft : C.textMuted, marginTop: 10 }}>{ritmoTxt}</div>}
+        </Card>
+      ) : (
+        <div style={{ color: C.textFaint, fontSize: 13, textAlign: "center", padding: "12px 0" }}>Defina um orçamento padrão acima pra ver o progresso do mês.</div>
+      )}
+    </div>
+  );
+}
+
 function SavingsContribute({ goal, accounts, onContribute }) {
   const [val, setVal] = useState("");
   const otherAccounts = accounts.filter((a) => a.id !== goal.accountId);
@@ -1564,7 +1856,7 @@ function SavingsForecast({ goal, saved, transactions }) {
 }
 
 /* ------------------------------ Análises ------------------------------ */
-function AnalisesTab({ last6Months, previsaoChart, previsao, porNecessidade, totalGasto, patrimonioEvolucao }) {
+function AnalisesTab({ last6Months, previsaoChart, previsao, previsaoRobusta, porNecessidade, totalGasto, patrimonioEvolucao }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <Card style={{ padding: 18 }}>
@@ -1598,7 +1890,15 @@ function AnalisesTab({ last6Months, previsaoChart, previsao, porNecessidade, tot
             </LineChart>
           </ResponsiveContainer>
         </div>
-        <div style={{ fontSize: 12, color: C.textFaint, marginTop: 6 }}>* projeção simples com base na média ponderada dos últimos 3 meses.</div>
+        {previsaoRobusta ? (
+          <div style={{ marginTop: 10, display: "flex", gap: 16, flexWrap: "wrap", fontSize: 12.5 }}>
+            <div><span style={{ color: C.textFaint }}>Já comprometido</span> · <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.brickSoft }}>{brl(previsaoRobusta.comprometido)}</span></div>
+            <div><span style={{ color: C.textFaint }}>+ Estimado (dia a dia)</span> · <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.goldSoft }}>{brl(previsaoRobusta.variavel)}</span></div>
+            <div><span style={{ color: C.textFaint }}>= Previsão total</span> · <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontWeight: 700 }}>{brl(previsaoRobusta.total)}</span></div>
+          </div>
+        ) : (
+          <div style={{ fontSize: 12, color: C.textFaint, marginTop: 6 }}>* projeção simples com base na média ponderada dos últimos 3 meses.</div>
+        )}
       </Card>
 
       <Card style={{ padding: 18 }}>
