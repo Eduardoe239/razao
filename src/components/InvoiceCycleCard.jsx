@@ -1,124 +1,77 @@
 import React from 'react';
 
 /**
- * WIDGET DE CARTÃO E CICLO DE FATURAS (O RAZÃO 3.0)
- * Exibe a saúde do cartão de crédito, barra de utilização do limite, datas de fechamento/vencimento
- * e botão direto para liquidação de fatura com validação matemática.
+ * CARD DE CICLO DE FATURA DE CARTÃO DE CRÉDITO (O RAZÃO 6.0)
  */
 
 export function InvoiceCycleCard({ card, invoice, formatCurrency, onPayInvoice }) {
-  if (!card) return null;
+  if (!card || !invoice) return null;
 
-  const limitCents = card.limitCents || 0;
-  const currentTotalCents = invoice?.totalCents || 0;
-  const remainingCents = invoice?.remainingCents ?? currentTotalCents;
-  const usagePercent = limitCents > 0 ? Math.min(100, Math.round((currentTotalCents / limitCents) * 100)) : 0;
+  const limitCents = card.limitCents || 100000;
+  const usedCents = invoice.totalCents || 0;
+  const remainingCents = invoice.remainingCents || 0;
+  const usagePercentage = Math.min(100, Math.round((usedCents / limitCents) * 100));
 
-  const isClosed = invoice?.status === 'fechada' || invoice?.status === 'vencida';
-  const isPaid = invoice?.status === 'paga' || remainingCents === 0;
+  const isClosed = invoice.status === 'fechada' || invoice.status === 'vencida';
 
   return (
-    <div className="glass-card" style={{ padding: '20px', marginBottom: '24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            width: '44px',
-            height: '44px',
-            borderRadius: '12px',
-            background: 'linear-gradient(135deg, #475569 0%, #0F172A 100%)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '22px'
-          }}>
+    <div className="summary-card" style={{ flexDirection: 'column', alignItems: 'stretch', padding: '20px', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div className="summary-icon-wrapper" style={{ background: 'var(--brand-light)', color: 'var(--brand-accent)' }}>
             💳
           </div>
           <div>
-            <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#F8FAFC' }}>{card.name || 'Cartão de Crédito'}</h3>
-            <p style={{ fontSize: '12px', color: '#94A3B8' }}>
-              Fechamento: Dia {card.closingDay || '10'} • Vencimento: Dia {card.dueDay || '20'}
+            <h4 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)' }}>{card.name}</h4>
+            <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+              Fechamento: Dia {card.closingDay} • Vencimento: Dia {card.dueDay}
             </p>
           </div>
         </div>
 
-        {/* Badge de Status da Fatura */}
-        <span
-          style={{
-            padding: '6px 12px',
-            borderRadius: '9999px',
-            fontSize: '12px',
-            fontWeight: '700',
-            textTransform: 'uppercase',
-            background: isPaid ? 'var(--color-income-bg)' : isClosed ? 'var(--color-expense-bg)' : 'var(--color-pending-bg)',
-            color: isPaid ? 'var(--color-income)' : isClosed ? 'var(--color-expense)' : 'var(--color-pending)'
-          }}
-        >
-          {isPaid ? 'Fatura Paga' : isClosed ? 'Fatura Fechada' : 'Fatura em Aberto'}
+        <span style={{
+          fontSize: '11px',
+          fontWeight: '800',
+          padding: '4px 8px',
+          borderRadius: 'var(--radius-pill)',
+          background: isClosed ? 'var(--color-expense-bg)' : 'var(--color-income-bg)',
+          color: isClosed ? 'var(--color-expense)' : 'var(--color-income)',
+          textTransform: 'uppercase'
+        }}>
+          {invoice.status}
         </span>
       </div>
 
-      {/* Grid de Valores da Fatura */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', padding: '16px', background: 'rgba(2, 6, 23, 0.4)', borderRadius: '12px', marginBottom: '16px' }}>
-        <div>
-          <span style={{ fontSize: '11px', color: '#64748B', display: 'block' }}>Total da Fatura</span>
-          <span className="font-mono-tabular" style={{ fontSize: '18px', fontWeight: '800', color: '#F8FAFC' }}>
-            {formatCurrency(currentTotalCents)}
-          </span>
+      {/* BARRA DE USO DO LIMITE */}
+      <div style={{ marginBottom: '14px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+          <span>Uso do Limite ({usagePercentage}%)</span>
+          <span>{formatCurrency(usedCents)} / {formatCurrency(limitCents)}</span>
         </div>
+        <div style={{ width: '100%', height: '8px', background: 'var(--surface-subtle)', borderRadius: '999px', overflow: 'hidden' }}>
+          <div style={{ width: `${usagePercentage}%`, height: '100%', background: 'var(--brand-gradient)', borderRadius: '999px' }} />
+        </div>
+      </div>
+
+      {/* BOTÃO DE LIQUIDAÇÃO DE FATURA */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid var(--border-card)' }}>
         <div>
-          <span style={{ fontSize: '11px', color: '#64748B', display: 'block' }}>Saldo Devedor</span>
-          <span className="font-mono-tabular" style={{ fontSize: '18px', fontWeight: '800', color: remainingCents > 0 ? 'var(--color-expense)' : 'var(--color-income)' }}>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>Saldo Devedor</span>
+          <span className="font-mono-tabular" style={{ fontSize: '16px', fontWeight: '800', color: 'var(--color-expense)' }}>
             {formatCurrency(remainingCents)}
           </span>
         </div>
-        <div>
-          <span style={{ fontSize: '11px', color: '#64748B', display: 'block' }}>Limite Disponível</span>
-          <span className="font-mono-tabular" style={{ fontSize: '18px', fontWeight: '800', color: '#00B4D8' }}>
-            {formatCurrency(Math.max(0, limitCents - currentTotalCents))}
-          </span>
-        </div>
-      </div>
 
-      {/* Barra de Uso do Limite */}
-      <div style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '6px', color: '#94A3B8' }}>
-          <span>Uso do Limite Total ({usagePercent}%)</span>
-          <span className="font-mono-tabular">{formatCurrency(limitCents)}</span>
-        </div>
-        <div style={{ height: '8px', width: '100%', background: 'rgba(255,255,255,0.1)', borderRadius: '9999px', overflow: 'hidden' }}>
-          <div
-            style={{
-              height: '100%',
-              width: `${usagePercent}%`,
-              background: usagePercent > 85 ? 'var(--color-expense)' : 'var(--brand-blue-gradient)',
-              borderRadius: '9999px',
-              transition: 'width 0.4s ease'
-            }}
-          />
-        </div>
+        {remainingCents > 0 && (
+          <button
+            onClick={() => onPayInvoice(card, invoice)}
+            className="btn-primary"
+            style={{ width: 'auto', padding: '10px 18px', fontSize: '13px' }}
+          >
+            Pagar Fatura
+          </button>
+        )}
       </div>
-
-      {/* Botão de Ação para Pagamento de Fatura */}
-      {remainingCents > 0 && (
-        <button
-          onClick={() => onPayInvoice(card, invoice)}
-          style={{
-            width: '100%',
-            padding: '12px',
-            borderRadius: '10px',
-            background: 'var(--color-income)',
-            color: '#020617',
-            border: 'none',
-            fontWeight: '800',
-            fontSize: '14px',
-            cursor: 'pointer',
-            transition: 'opacity 0.2s'
-          }}
-        >
-          Pagar Fatura ({formatCurrency(remainingCents)})
-        </button>
-      )}
     </div>
   );
 }

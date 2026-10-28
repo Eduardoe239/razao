@@ -3,15 +3,16 @@ import React, { useState, useEffect } from 'react';
 // Design System & Estilos
 import './styles/theme.css';
 
-// Componentes da Interface Repaginada
+// Componentes da Interface (Inspirados no Money Manager)
 import { AppShell } from './components/AppShell';
-import { SegmentedTabs } from './components/SegmentedTabs';
 import { ExecutiveBalanceHeader } from './components/ExecutiveBalanceHeader';
+import { ExpenseAnalytics } from './components/ExpenseAnalytics';
 import { InvoiceCycleCard } from './components/InvoiceCycleCard';
 import { TransactionFeed } from './components/TransactionFeed';
 import { TransactionModal } from './components/TransactionModal';
+import { SegmentedTabs, DateNavigator } from './components/SegmentedTabs';
 
-// Funções Puramente Determinísticas do Domínio
+// Funções Puras do Domínio Financeiro
 import { accountBalance } from './domain/accounts';
 import { cardInvoices } from './domain/invoices';
 import { buildCommitments } from './domain/commitments';
@@ -21,14 +22,13 @@ import { uid } from './domain/uid';
 import { loadState, saveState } from './services/storage';
 
 /**
- * APLICAÇÃO PRINCIPAL - O RAZÃO 3.0 (ORQUESTRADOR DE UI)
- * Atua estritamente como orquestrador visual.
- * Toda e qualquer regra financeira é delegada aos módulos de domínio.
+ * APLICAÇÃO PRINCIPAL - O RAZÃO 6.0
+ * Orquestrador UI/UX responsivo mobile-first.
+ * Toda a lógica de negócios permanece estritamente purista em src/domain/.
  */
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, transactions, invoices, budget, commitments, settings
-  const [dashboardSubTab, setDashboardSubTab] = useState('overview'); // overview, cashflow, forecast
+  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, analytics, transactions, invoices, commitments, settings
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
 
@@ -45,10 +45,10 @@ export default function App() {
 
   const { transactions = [], accounts = [], categories = [], cards = [] } = state;
 
-  // Formatting Helper
+  // Helper de Formatação Monetária BRL
   const formatCurrency = (amountCents) => formatMoney(amountCents || 0);
 
-  // Data operacional do sistema
+  // Data Operacional do Sistema
   const todayISO = new Date().toISOString().slice(0, 10);
 
   // 1. CÁLCULO DOS SALDOS VIA DOMÍNIO
@@ -70,6 +70,15 @@ export default function App() {
 
   const projectedCents = realizedCents + pendingCents;
 
+  // Entradas e Saídas Liquidadas no Mês
+  const incomeCents = transactions
+    .filter(t => t.type === 'receita' && t.status === 'pago')
+    .reduce((acc, t) => acc + (t.amountCents || 0), 0);
+
+  const expenseCents = transactions
+    .filter(t => t.type === 'despesa' && t.status === 'pago')
+    .reduce((acc, t) => acc + (t.amountCents || 0), 0);
+
   // Cartão Padrão e Faturas via Domínio
   const primaryCard = cards[0] || { id: 'card-1', name: 'Cartão Principal', limitCents: 500000, closingDay: 10, dueDay: 20 };
   const invoicesData = cardInvoices(primaryCard, transactions, todayISO.slice(0, 7), 2, 2, todayISO);
@@ -81,7 +90,7 @@ export default function App() {
   // Compromissos do Mês
   const commitments = buildCommitments({ transactions, todayISO, monthsAhead: 3 });
 
-  // HANDLERS DE AÇÃO DE NEGÓCIO
+  // HANDLERS DE AÇÃO
   const handleSaveTransaction = (data) => {
     if (data.id) {
       // Edição
@@ -103,7 +112,7 @@ export default function App() {
   };
 
   const handleDeleteTransaction = (id) => {
-    if (window.confirm('Tem certeza que deseja excluir este lançamento?')) {
+    if (window.confirm('Deseja realmente excluir este lançamento?')) {
       setState(prev => ({
         ...prev,
         transactions: prev.transactions.filter(t => t.id !== id)
@@ -123,7 +132,6 @@ export default function App() {
     if (!invoice || invoice.remainingCents <= 0) return;
     const paymentAmount = invoice.remainingCents;
 
-    // Lançamento de despesa de pagamento de fatura
     const paymentTransaction = {
       id: uid(),
       type: 'despesa',
@@ -150,32 +158,21 @@ export default function App() {
       onNewTransaction={() => { setEditingTransaction(null); setIsModalOpen(true); }}
       badges={{ pendingInvoices: currentInvoice?.status === 'fechada' ? 1 : 0 }}
     >
-      {/* 1. ABA PAINEL GERAL (DASHBOARD) */}
+      {/* 1. PAINEL GERAL (DASHBOARD TELA 1) */}
       {activeTab === 'dashboard' && (
         <div>
-          {/* Sub-abas de Navegação Interna */}
-          <div style={{ marginBottom: '20px' }}>
-            <SegmentedTabs
-              tabs={[
-                { id: 'overview', label: 'Visão Geral Executiva', icon: '⚡' },
-                { id: 'cashflow', label: 'Fluxo de Caixa', icon: '📊' },
-                { id: 'forecast', label: 'Projeção Futurista', icon: '🎯' }
-              ]}
-              activeTab={dashboardSubTab}
-              onChange={setDashboardSubTab}
-            />
-          </div>
-
-          {/* Cabeçalho Executivo com os 4 Saldos */}
+          {/* Cabeçalho Hero com os 4 Saldos e Cards Divididos */}
           <ExecutiveBalanceHeader
             realizedCents={realizedCents}
             projectedCents={projectedCents}
             committedCents={committedCents}
             availableCents={availableCents}
+            incomeCents={incomeCents}
+            expenseCents={expenseCents}
             formatCurrency={formatCurrency}
           />
 
-          {/* Widget do Cartão de Crédito e Ciclo de Fatura */}
+          {/* Widget da Fatura do Cartão */}
           <InvoiceCycleCard
             card={primaryCard}
             invoice={currentInvoice}
@@ -183,10 +180,14 @@ export default function App() {
             onPayInvoice={handlePayInvoice}
           />
 
-          {/* Lista Recente de Transações */}
-          <h3 style={{ fontSize: '16px', fontWeight: '800', marginBottom: '12px', color: '#F8FAFC' }}>
-            Últimas Movimentações
-          </h3>
+          {/* Feed de Últimas Movimentações */}
+          <div className="section-title-bar">
+            <h3 className="section-title">Últimas Movimentações</h3>
+            <span className="see-all-link" onClick={() => setActiveTab('transactions')}>
+              Ver Extrato
+            </span>
+          </div>
+
           <TransactionFeed
             transactions={transactions.slice(0, 10)}
             accounts={accounts}
@@ -199,25 +200,28 @@ export default function App() {
         </div>
       )}
 
-      {/* 2. ABA LANÇAMENTOS (TRANSACTIONS) */}
+      {/* 2. RELATÓRIOS & ANALYTICS (TELA 2 - BREAKDOWN DONUT) */}
+      {activeTab === 'analytics' && (
+        <div>
+          <ExpenseAnalytics
+            transactions={transactions}
+            categories={categories}
+            formatCurrency={formatCurrency}
+          />
+        </div>
+      )}
+
+      {/* 3. EXTRATO DE TRANSAÇÕES */}
       {activeTab === 'transactions' && (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#F8FAFC' }}>Histórico Completo de Lançamentos</h3>
+          <div className="section-title-bar" style={{ marginBottom: '16px' }}>
+            <h3 className="section-title">Extrato de Lançamentos</h3>
             <button
               onClick={() => { setEditingTransaction(null); setIsModalOpen(true); }}
-              style={{
-                padding: '10px 16px',
-                borderRadius: '10px',
-                background: 'var(--brand-blue-gradient)',
-                color: '#FFF',
-                border: 'none',
-                fontWeight: '700',
-                fontSize: '13px',
-                cursor: 'pointer'
-              }}
+              className="btn-primary"
+              style={{ width: 'auto', padding: '8px 14px', fontSize: '12px' }}
             >
-              + Novo Lançamento
+              + Novo
             </button>
           </div>
 
@@ -233,11 +237,11 @@ export default function App() {
         </div>
       )}
 
-      {/* 3. ABA CARTÕES E FATURAS */}
+      {/* 4. CARTÕES E FATURAS */}
       {activeTab === 'invoices' && (
         <div>
-          <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '16px', color: '#F8FAFC' }}>
-            Gestão do Ciclo de Faturas de Cartão
+          <h3 className="section-title" style={{ marginBottom: '16px' }}>
+            Gestão do Ciclo de Faturas
           </h3>
           <InvoiceCycleCard
             card={primaryCard}
@@ -248,53 +252,53 @@ export default function App() {
         </div>
       )}
 
-      {/* 4. ABA ORÇAMENTO */}
-      {activeTab === 'budget' && (
-        <div className="glass-card" style={{ padding: '24px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '12px', color: '#F8FAFC' }}>
-            Orçamento por Categoria
-          </h3>
-          <p style={{ fontSize: '13px', color: '#94A3B8' }}>
-            Defina limites rigorosos de gastos para cada categoria. Orçamento zero é mantido explicitamente como 0 centavos.
-          </p>
-        </div>
-      )}
-
-      {/* 5. ABA COMPROMISSOS */}
+      {/* 5. COMPROMISSOS */}
       {activeTab === 'commitments' && (
-        <div className="glass-card" style={{ padding: '24px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '12px', color: '#F8FAFC' }}>
-            Compromissos e Contas Futuras
+        <div>
+          <h3 className="section-title" style={{ marginBottom: '16px' }}>
+            Compromissos e Obrigações Futuras
           </h3>
-          <p style={{ fontSize: '13px', color: '#94A3B8', marginBottom: '16px' }}>
-            Visualização sem dupla contagem de parcelas, faturas e obrigações fixas.
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {commitments.map((c, idx) => (
-              <div key={idx} style={{ padding: '12px', borderRadius: '10px', background: 'rgba(2, 6, 23, 0.5)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <span style={{ fontSize: '14px', fontWeight: '700', color: '#F8FAFC' }}>{c.description || 'Compromisso'}</span>
-                  <span style={{ fontSize: '11px', color: '#64748B', display: 'block' }}>Vencimento: {c.date}</span>
-                </div>
-                <span className="font-mono-tabular" style={{ fontSize: '15px', fontWeight: '800', color: 'var(--color-pending)' }}>
-                  {formatCurrency(c.amountCents || 0)}
-                </span>
+          <div className="transaction-list">
+            {commitments.length === 0 ? (
+              <div className="summary-card" style={{ padding: '24px', justifyContent: 'center', color: 'var(--text-muted)' }}>
+                Nenhum compromisso pendente.
               </div>
-            ))}
+            ) : (
+              commitments.map((c, idx) => (
+                <div key={idx} className="transaction-card-item">
+                  <div className="tx-left">
+                    <div className="tx-icon-box" style={{ background: 'var(--color-pending-bg)', color: 'var(--color-pending)' }}>
+                      📅
+                    </div>
+                    <div className="tx-details">
+                      <span className="tx-title">{c.description || 'Compromisso'}</span>
+                      <span className="tx-subtitle">Vencimento: {c.date}</span>
+                    </div>
+                  </div>
+                  <div className="tx-right">
+                    <span className="tx-amount font-mono-tabular" style={{ color: 'var(--color-pending)' }}>
+                      {formatCurrency(c.amountCents || 0)}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}
 
-      {/* 6. ABA AJUSTES & BACKUP */}
+      {/* 6. AJUSTES & BACKUP */}
       {activeTab === 'settings' && (
-        <div className="glass-card" style={{ padding: '24px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '800', marginBottom: '12px', color: '#F8FAFC' }}>
-            Configurações, Integridade & Backups
+        <div className="summary-card" style={{ flexDirection: 'column', alignItems: 'stretch', padding: '24px' }}>
+          <h3 className="section-title" style={{ marginBottom: '8px' }}>
+            Configurações & Backup
           </h3>
-          <p style={{ fontSize: '13px', color: '#94A3B8', marginBottom: '20px' }}>
-            Exportação versionada em JSON e recuperação de backups sanitizados sem perda de metadados.
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
+            Exportação versionada em JSON e recuperação segura de backups sanitizados.
           </p>
+
           <button
+            className="btn-primary"
             onClick={() => {
               const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
               const downloadAnchor = document.createElement('a');
@@ -304,23 +308,13 @@ export default function App() {
               downloadAnchor.click();
               downloadAnchor.remove();
             }}
-            style={{
-              padding: '12px 20px',
-              borderRadius: '10px',
-              background: 'var(--brand-blue-gradient)',
-              color: '#FFF',
-              border: 'none',
-              fontWeight: '700',
-              fontSize: '13px',
-              cursor: 'pointer'
-            }}
           >
-            Exportar Backup JSON Versionado
+            Exportar Backup JSON
           </button>
         </div>
       )}
 
-      {/* Modal Acessível de Lançamento */}
+      {/* Modal Acessível de Novo/Editar Lançamento */}
       <TransactionModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

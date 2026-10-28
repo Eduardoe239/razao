@@ -1,12 +1,10 @@
 import React from 'react';
 
 /**
- * CABEÇALHO EXECUTIVO DE SALDOS (O RAZÃO 3.0)
- * Elimina toda a ambiguidade matemática ao separar rigorosamente os 4 saldos do sistema:
- * 1. Saldo Realizado (Dinheiro Efetivo)
- * 2. Saldo Previsto (Projeção do Mês)
- * 3. Saldo Comprometido (Faturas & Obrigações)
- * 4. Saldo Disponível (Recursos Livres)
+ * CABEÇALHO HERO DE SALDOS (O RAZÃO 6.0)
+ * Inspirado diretamente na interface "Money Manager".
+ * Apresenta o saldo principal em destaque com badge de seleção de conta e
+ * os 4 Saldos Executivos amarrados matematicamente.
  */
 
 export function ExecutiveBalanceHeader({
@@ -14,92 +12,87 @@ export function ExecutiveBalanceHeader({
   projectedCents = 0,
   committedCents = 0,
   availableCents = 0,
+  incomeCents = 0,
+  expenseCents = 0,
   formatCurrency
 }) {
-  const cards = [
-    {
-      id: 'realized',
-      title: 'Saldo Realizado',
-      subtitle: 'Liquidados em Conta',
-      amountCents: realizedCents,
-      color: 'var(--color-income)',
-      bgColor: 'var(--color-income-bg)',
-      icon: '💵',
-      tooltip: 'Dinheiro efetivamente recebido menos despesas já pagas.'
-    },
-    {
-      id: 'projected',
-      title: 'Saldo Previsto',
-      subtitle: 'Final do Período',
-      amountCents: projectedCents,
-      color: 'var(--brand-blue-cyan)',
-      bgColor: 'rgba(0, 180, 216, 0.12)',
-      icon: '📈',
-      tooltip: 'Saldo realizado + receitas e despesas pendentes projetadas.'
-    },
-    {
-      id: 'committed',
-      title: 'Comprometido',
-      subtitle: 'Faturas & Fixas',
-      amountCents: committedCents,
-      color: 'var(--color-pending)',
-      bgColor: 'var(--color-pending-bg)',
-      icon: '🔒',
-      tooltip: 'Reservado para faturas de cartão abertas e compromissos fixos.'
-    },
-    {
-      id: 'available',
-      title: 'Saldo Disponível',
-      subtitle: 'Recursos Livres',
-      amountCents: availableCents,
-      color: '#A855F7',
-      bgColor: 'rgba(168, 85, 247, 0.12)',
-      icon: '💎',
-      tooltip: 'Recursos livres para uso sem afetar suas obrigações financeiras.'
-    }
-  ];
-
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-      {cards.map((card) => (
-        <div
-          key={card.id}
-          className="glass-card"
-          style={{
-            padding: '20px',
-            position: 'relative',
-            overflow: 'hidden',
-            borderLeft: `4px solid ${card.color}`
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-            <div>
-              <span style={{ fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94A3B8' }}>
-                {card.title}
-              </span>
-              <p style={{ fontSize: '11px', color: '#64748B' }}>{card.subtitle}</p>
-            </div>
-            <div
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '10px',
-                background: card.bgColor,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '18px'
-              }}
-            >
-              {card.icon}
-            </div>
+    <div>
+      {/* CARD PRINCIPAL HERO (AZUL / ROXO) */}
+      <div className="hero-balance-card">
+        <div className="hero-header">
+          <div className="account-selector-pill">
+            <span>Saldo Principal</span>
+            <span style={{ fontSize: '10px' }}>▼</span>
+          </div>
+          <span style={{ fontSize: '11px', opacity: 0.8, textTransform: 'uppercase', fontWeight: '700' }}>
+            Consolidado
+          </span>
+        </div>
+
+        <div className="hero-label">Patrimônio / Disponível</div>
+        <div className="hero-amount font-mono-tabular">
+          {formatCurrency(availableCents)}
+        </div>
+
+        {/* SUB-GRID COM OS 4 SALDOS DETERMINÍSTICOS */}
+        <div className="saldos-grid">
+          <div className="saldo-item">
+            <span className="saldo-item-label">1. Realizado</span>
+            <span className="saldo-item-value font-mono-tabular">
+              {formatCurrency(realizedCents)}
+            </span>
           </div>
 
-          <div className="font-mono-tabular" style={{ fontSize: '24px', fontWeight: '800', color: '#F8FAFC' }}>
-            {formatCurrency(card.amountCents)}
+          <div className="saldo-item">
+            <span className="saldo-item-label">2. Previsto</span>
+            <span className="saldo-item-value font-mono-tabular">
+              {formatCurrency(projectedCents)}
+            </span>
+          </div>
+
+          <div className="saldo-item">
+            <span className="saldo-item-label">3. Comprometido</span>
+            <span className="saldo-item-value font-mono-tabular" style={{ color: '#FCA5A5' }}>
+              {formatCurrency(committedCents)}
+            </span>
+          </div>
+
+          <div className="saldo-item">
+            <span className="saldo-item-label">4. Livre / Disponível</span>
+            <span className="saldo-item-value font-mono-tabular" style={{ color: '#6EE7B7' }}>
+              {formatCurrency(availableCents)}
+            </span>
           </div>
         </div>
-      ))}
+      </div>
+
+      {/* CARDS DIVIDIDOS: RECEITAS X DESPESAS (INCOME X EXPENSE SPLIT CARDS) */}
+      <div className="summary-split-grid">
+        <div className="summary-card">
+          <div className="summary-icon-wrapper summary-icon-income">
+            ↓
+          </div>
+          <div className="summary-info">
+            <span className="summary-label">Entradas</span>
+            <span className="summary-value font-mono-tabular" style={{ color: 'var(--color-income)' }}>
+              {formatCurrency(incomeCents)}
+            </span>
+          </div>
+        </div>
+
+        <div className="summary-card">
+          <div className="summary-icon-wrapper summary-icon-expense">
+            ↑
+          </div>
+          <div className="summary-info">
+            <span className="summary-label">Saídas</span>
+            <span className="summary-value font-mono-tabular" style={{ color: 'var(--color-expense)' }}>
+              {formatCurrency(expenseCents)}
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
