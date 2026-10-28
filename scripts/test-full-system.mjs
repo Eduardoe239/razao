@@ -8,6 +8,13 @@ import { budgetForMonth, setCategoryBudget } from "../src/domain/budget.js";
 import { calculateSavingsBalance } from "../src/domain/savings.js";
 import { migrateData } from "../src/domain/migrations.js";
 import { calculateForecast } from "../src/domain/forecast.js";
+import { calculateUserAchievements } from "../src/domain/achievements.js";
+import { parseOFX, parseCSV } from "../src/domain/importers.js";
+import { reconcileTransactions } from "../src/domain/reconciliation.js";
+import { parseReceiptText } from "../src/domain/receiptOcr.js";
+import { buildFinancialContext, queryAIAdvisor } from "../src/domain/aiContextEngine.js";
+import { simulateScenarios } from "../src/domain/scenarioSimulator.js";
+import { detectAnomalies } from "../src/domain/anomalyDetector.js";
 import { loadState, saveState } from "../src/services/storage.js";
 import { runSyncQueueTests } from "../src/services/syncQueue.test.js";
 
@@ -33,7 +40,7 @@ class MemoryStorage {
 global.localStorage = new MemoryStorage();
 
 console.log("=================================================================");
-console.log("   O RAZÃO V3.2 — SUÍTE DE TESTES E2E INTEGRAL (DOMÍNIO + FASE 5)");
+console.log("   O RAZÃO V10.0 — SUÍTE INTEGRAL DE TESTES DE SISTEMA & FASES 5/6/7");
 console.log("=================================================================\n");
 
 let passed = 0;
@@ -110,19 +117,64 @@ async function runAllTests() {
   const fc = calculateForecast({ transactions: [], todayISO: "2026-10-28", monthsAhead: 2 });
   assert(fc.length === 3, "calculateForecast deve retornar N+1 meses de projeção");
 
-  // 11. Storage Service
-  console.log("\n📦 11. Testes do Serviço de Armazenamento (storage.js)");
+  // 11. Gamificação Domain
+  console.log("\n📦 11. Testes do Módulo de Gamificação e Conquistas (achievements.js)");
+  const ach = calculateUserAchievements({ transactions: [{ status: "pago", amountCents: 100000 }] }, [{ initialBalanceCents: 1000000 }]);
+  assert(ach.unlockedCount > 0 && ach.userTitle !== "", "calculateUserAchievements calcula pontos e desbloqueia títulos corretamente");
+
+  // 12. Fase 6 Importers & Open Finance
+  console.log("\n📦 12. Testes da Fase 6 (OFX/CSV Importers, OCR & Reconciliação)");
+  const ofxRes = parseOFX('<STMTTRN><TRNTYPE>DEBIT<DTPOSTED>20261028<TRNAMT>-100.00<FITID>1<MEMO>Teste</STMTTRN>');
+  assert(ofxRes.length === 1 && ofxRes[0].amountCents === 10000, "parseOFX extraiu lançamento e converteu para 10000 centavos");
+
+  const csvRes = parseCSV('Data;Descrição;Valor\n28/10/2026;Almoço;-25,00');
+  assert(csvRes.length === 1 && csvRes[0].amountCents === 2500, "parseCSV extraiu lançamento e converteu para 2500 centavos");
+
+  const recRes = reconcileTransactions(ofxRes, [{ amountCents: 10000, date: '2026-10-28', type: 'despesa' }]);
+  assert(recRes[0].reconciliationStatus === 'duplicate', "reconcileTransactions detectou lançamento duplicado");
+
+  const ocrRes = parseReceiptText('VALOR: R$ 80,00\nDATA: 28/10/2026\nDESTINATÁRIO: Mercado Exemplo');
+  assert(ocrRes.amountCents === 8000 && ocrRes.merchantName.includes('Mercado Exemplo'), "parseReceiptText extraiu R$ 80,00 e nome do recebedor");
+
+  // 13. Fase 7 IA Razão, Cenários & Anomalias
+  console.log("\n📦 13. Testes da Fase 7 (IA Razão, Simulador What-If & Detecção de Anomalias)");
+  const sampleState = {
+    accounts: [{ id: 'acc-1', initialBalanceCents: 100000 }],
+    cards: [{ id: 'card-1', closingDay: 10, dueDay: 20 }],
+    categories: [{ id: 'cat-1', name: 'Restaurante', type: 'despesa' }],
+    budgets: { 'cat-1:2026-10': 10000 },
+    transactions: [
+      { id: 't1', type: 'receita', amountCents: 500000, status: 'pago', date: '2026-10-01', accountId: 'acc-1' },
+      { id: 't2', type: 'despesa', amountCents: 12000, status: 'pago', date: '2026-10-10', accountId: 'acc-1', categoryId: 'cat-1', description: 'Jantar' },
+      { id: 't3', type: 'despesa', amountCents: 12000, status: 'pago', date: '2026-10-11', accountId: 'acc-1', categoryId: 'cat-1', description: 'Jantar' }
+    ]
+  };
+
+  const aiCtx = buildFinancialContext(sampleState, '2026-10-28');
+  assert(aiCtx.realizedCents === 476000, "buildFinancialContext calculou saldo em centavos com precisão");
+
+  const aiRes = queryAIAdvisor('Posso comprar um item de R$ 500?', sampleState, '2026-10-28');
+  assert(aiRes.isSafe === true, "queryAIAdvisor realizou simulação determinística com sucesso");
+
+  const simRes = simulateScenarios({ state: sampleState, todayISO: '2026-10-28', monthsAhead: 3 });
+  assert(simRes.monthlyProjections.length === 4, "simulateScenarios projetou os 3 cenários corretamente");
+
+  const anomRes = detectAnomalies(sampleState, '2026-10-28');
+  assert(anomRes.length >= 2, "detectAnomalies identificou anomalias de orçamento e duplicidade");
+
+  // 14. Storage Service
+  console.log("\n📦 14. Testes do Serviço de Armazenamento (storage.js)");
   saveState({ version: 3, test: true });
   const loaded = loadState();
   assert(loaded && loaded.test === true, "saveState e loadState devem persistir o estado localmente");
 
-  // 12. Phase 5 Sync Engine
-  console.log("\n📦 12. Testes da Fase 5 (Outbox Sync Engine & Conflict Resolution)");
+  // 15. Phase 5 Sync Engine
+  console.log("\n📦 15. Testes da Fase 5 (Outbox Sync Engine & Conflict Resolution)");
   const phase5Ok = await runSyncQueueTests();
   assert(phase5Ok === true, "Motor da Fase 5 deve passar em todos os testes de sincronização");
 
   console.log("\n=================================================================");
-  console.log(`   RESULTADO DOS TESTES INTEGRATION + FASE 5: ${passed} APROVADOS, ${failed} FALHAS`);
+  console.log(`   RESULTADO DOS TESTES INTEGRATION V10.0: ${passed} APROVADOS, ${failed} FALHAS`);
   console.log("=================================================================\n");
 
   if (failed > 0) process.exit(1);

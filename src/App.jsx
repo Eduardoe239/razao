@@ -3,33 +3,34 @@ import React, { useState, useEffect } from 'react';
 // Design System & Estilos
 import './styles/theme.css';
 
-// Componentes da Interface (Inspirados no Money Manager)
+// Componentes da Interface
 import { AppShell } from './components/AppShell';
+import { SegmentedTabs } from './components/SegmentedTabs';
 import { ExecutiveBalanceHeader } from './components/ExecutiveBalanceHeader';
-import { ExpenseAnalytics } from './components/ExpenseAnalytics';
 import { InvoiceCycleCard } from './components/InvoiceCycleCard';
 import { TransactionFeed } from './components/TransactionFeed';
 import { TransactionModal } from './components/TransactionModal';
-import { SegmentedTabs, DateNavigator } from './components/SegmentedTabs';
+import { ExpenseAnalytics } from './components/ExpenseAnalytics';
+import { UserProfilePanel } from './components/UserProfilePanel';
+import { PersonalizationPanel } from './components/PersonalizationPanel';
+import { FinancialCharts } from './components/FinancialCharts';
+import { ImportReconciliationModal } from './components/ImportReconciliationModal';
+import { AIPredictivePanel } from './components/AIPredictivePanel';
 
-// Funções Puras do Domínio Financeiro
-import { accountBalance } from './domain/accounts';
+// Domínio Financeiro Determinístico
 import { cardInvoices } from './domain/invoices';
 import { buildCommitments } from './domain/commitments';
 import { formatMoney } from './domain/money';
 import { sanitizeState } from './domain/sanitize';
 import { uid } from './domain/uid';
+import { calculateUserAchievements } from './domain/achievements';
 import { loadState, saveState } from './services/storage';
 
-/**
- * APLICAÇÃO PRINCIPAL - O RAZÃO 6.0
- * Orquestrador UI/UX responsivo mobile-first.
- * Toda a lógica de negócios permanece estritamente purista em src/domain/.
- */
-
 export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, analytics, transactions, invoices, commitments, settings
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [dashboardPeriod, setDashboardPeriod] = useState('monthly');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
 
   // Estado Central Financeiro
@@ -38,20 +39,28 @@ export default function App() {
     return sanitizeState(loaded || {});
   });
 
+  // Estado do Perfil do Usuário
+  const [userProfile, setUserProfile] = useState(() => {
+    return state.userProfile || {
+      name: 'Eduardo',
+      email: 'eduardo@orazao.com.br',
+      phone: '(11) 98765-4321',
+      avatarEmoji: '👨‍💼',
+      title: 'Iniciado do Razão'
+    };
+  });
+
   // Persistência Observável
   useEffect(() => {
-    saveState(state);
-  }, [state]);
+    saveState({ ...state, userProfile });
+  }, [state, userProfile]);
 
   const { transactions = [], accounts = [], categories = [], cards = [] } = state;
 
-  // Helper de Formatação Monetária BRL
   const formatCurrency = (amountCents) => formatMoney(amountCents || 0);
-
-  // Data Operacional do Sistema
   const todayISO = new Date().toISOString().slice(0, 10);
 
-  // 1. CÁLCULO DOS SALDOS VIA DOMÍNIO
+  // 1. CÁLCULO DOS 4 SALDOS EXECUTIVOS VIA DOMÍNIO
   const realizedCents = transactions
     .filter(t => t.status === 'pago')
     .reduce((acc, t) => {
@@ -70,7 +79,13 @@ export default function App() {
 
   const projectedCents = realizedCents + pendingCents;
 
-  // Entradas e Saídas Liquidadas no Mês
+  const primaryCard = cards[0] || { id: 'card-1', name: 'Cartão Black', limitCents: 1500000, closingDay: 10, dueDay: 20 };
+  const invoicesData = cardInvoices(primaryCard, transactions, todayISO.slice(0, 7), 2, 2, todayISO);
+  const currentInvoice = invoicesData.find(i => i.monthKey === todayISO.slice(0, 7)) || invoicesData[0];
+
+  const committedCents = currentInvoice ? currentInvoice.remainingCents : 0;
+  const availableCents = realizedCents - committedCents;
+
   const incomeCents = transactions
     .filter(t => t.type === 'receita' && t.status === 'pago')
     .reduce((acc, t) => acc + (t.amountCents || 0), 0);
@@ -79,27 +94,16 @@ export default function App() {
     .filter(t => t.type === 'despesa' && t.status === 'pago')
     .reduce((acc, t) => acc + (t.amountCents || 0), 0);
 
-  // Cartão Padrão e Faturas via Domínio
-  const primaryCard = cards[0] || { id: 'card-1', name: 'Cartão Principal', limitCents: 500000, closingDay: 10, dueDay: 20 };
-  const invoicesData = cardInvoices(primaryCard, transactions, todayISO.slice(0, 7), 2, 2, todayISO);
-  const currentInvoice = invoicesData.find(i => i.monthKey === todayISO.slice(0, 7)) || invoicesData[0];
-
-  const committedCents = currentInvoice ? currentInvoice.remainingCents : 0;
-  const availableCents = realizedCents - committedCents;
-
-  // Compromissos do Mês
   const commitments = buildCommitments({ transactions, todayISO, monthsAhead: 3 });
 
-  // HANDLERS DE AÇÃO
+  // HANDLERS
   const handleSaveTransaction = (data) => {
     if (data.id) {
-      // Edição
       setState(prev => ({
         ...prev,
         transactions: prev.transactions.map(t => t.id === data.id ? { ...t, ...data } : t)
       }));
     } else {
-      // Criação de Novo Lançamento
       const newTransaction = {
         ...data,
         id: uid()
@@ -112,7 +116,7 @@ export default function App() {
   };
 
   const handleDeleteTransaction = (id) => {
-    if (window.confirm('Deseja realmente excluir este lançamento?')) {
+    if (window.confirm('Tem certeza que deseja excluir este lançamento?')) {
       setState(prev => ({
         ...prev,
         transactions: prev.transactions.filter(t => t.id !== id)
@@ -151,17 +155,46 @@ export default function App() {
     alert(`Pagamento de ${formatCurrency(paymentAmount)} realizado com sucesso!`);
   };
 
+  const handleImportConfirmed = (importedTxs) => {
+    setState(prev => ({
+      ...prev,
+      transactions: [...importedTxs, ...prev.transactions]
+    }));
+    alert(`${importedTxs.length} lançamento(s) importado(s) e reconciliado(s) com sucesso!`);
+  };
+
   return (
     <AppShell
       activeTab={activeTab}
       setActiveTab={setActiveTab}
       onNewTransaction={() => { setEditingTransaction(null); setIsModalOpen(true); }}
+      userProfile={userProfile}
       badges={{ pendingInvoices: currentInvoice?.status === 'fechada' ? 1 : 0 }}
     >
-      {/* 1. PAINEL GERAL (DASHBOARD TELA 1) */}
+      {/* 1. ABA PAINEL GERAL (DASHBOARD) */}
       {activeTab === 'dashboard' && (
         <div>
-          {/* Cabeçalho Hero com os 4 Saldos e Cards Divididos */}
+          {/* Navegador de Períodos em Pílulas */}
+          <div className="pill-tabs-container">
+            <button className={`pill-tab ${dashboardPeriod === 'weekly' ? 'active' : ''}`} onClick={() => setDashboardPeriod('weekly')}>
+              Semanal
+            </button>
+            <button className={`pill-tab ${dashboardPeriod === 'monthly' ? 'active' : ''}`} onClick={() => setDashboardPeriod('monthly')}>
+              Mensal
+            </button>
+            <button className={`pill-tab ${dashboardPeriod === 'quarterly' ? 'active' : ''}`} onClick={() => setDashboardPeriod('quarterly')}>
+              3 Meses
+            </button>
+          </div>
+
+          {/* Navegador de Datas */}
+          <div className="date-navigator">
+            <button className="date-nav-btn">◀</button>
+            <span className="date-nav-label">Outubro 2026</span>
+            <button className="date-nav-btn">▶</button>
+          </div>
+
+          {/* Card Hero dos 4 Saldos Executivos */}
           <ExecutiveBalanceHeader
             realizedCents={realizedCents}
             projectedCents={projectedCents}
@@ -172,24 +205,36 @@ export default function App() {
             formatCurrency={formatCurrency}
           />
 
-          {/* Widget da Fatura do Cartão */}
-          <InvoiceCycleCard
-            card={primaryCard}
-            invoice={currentInvoice}
-            formatCurrency={formatCurrency}
-            onPayInvoice={handlePayInvoice}
-          />
+          {/* Ações Rápidas: Importar Extrato */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              style={{
+                padding: '8px 14px',
+                borderRadius: 'var(--radius-pill)',
+                background: 'var(--surface-subtle)',
+                border: '1px solid var(--border-card)',
+                color: 'var(--brand-accent)',
+                fontSize: '12px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <span>📥</span> Importar OFX / Pix
+            </button>
+          </div>
 
-          {/* Feed de Últimas Movimentações */}
+          {/* Lista Recente de Lançamentos */}
           <div className="section-title-bar">
             <h3 className="section-title">Últimas Movimentações</h3>
-            <span className="see-all-link" onClick={() => setActiveTab('transactions')}>
-              Ver Extrato
-            </span>
+            <span className="see-all-link" onClick={() => setActiveTab('transactions')}>Ver Todas →</span>
           </div>
 
           <TransactionFeed
-            transactions={transactions.slice(0, 10)}
+            transactions={transactions.slice(0, 8)}
             accounts={accounts}
             categories={categories}
             formatCurrency={formatCurrency}
@@ -200,9 +245,79 @@ export default function App() {
         </div>
       )}
 
-      {/* 2. RELATÓRIOS & ANALYTICS (TELA 2 - BREAKDOWN DONUT) */}
+      {/* 2. ABA LANÇAMENTOS */}
+      {activeTab === 'transactions' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 className="section-title">Histórico de Lançamentos</h3>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={() => setIsImportModalOpen(true)}
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--surface-subtle)',
+                  border: '1px solid var(--border-card)',
+                  color: 'var(--text-primary)',
+                  fontWeight: '700',
+                  fontSize: '13px',
+                  cursor: 'pointer'
+                }}
+              >
+                📥 Importar
+              </button>
+              <button
+                onClick={() => { setEditingTransaction(null); setIsModalOpen(true); }}
+                className="btn-primary"
+                style={{ padding: '10px 16px', fontSize: '13px' }}
+              >
+                + Novo Lançamento
+              </button>
+            </div>
+          </div>
+
+          <TransactionFeed
+            transactions={transactions}
+            accounts={accounts}
+            categories={categories}
+            formatCurrency={formatCurrency}
+            onEditTransaction={(t) => { setEditingTransaction(t); setIsModalOpen(true); }}
+            onDeleteTransaction={handleDeleteTransaction}
+            onToggleStatus={handleToggleStatus}
+          />
+        </div>
+      )}
+
+      {/* 3. ABA CARTÕES E FATURAS */}
+      {activeTab === 'invoices' && (
+        <div>
+          <InvoiceCycleCard
+            card={primaryCard}
+            invoice={currentInvoice}
+            formatCurrency={formatCurrency}
+            onPayInvoice={handlePayInvoice}
+          />
+        </div>
+      )}
+
+      {/* 4. ABA LIMITES & ORÇAMENTO */}
+      {activeTab === 'budget' && (
+        <div className="summary-card" style={{ flexDirection: 'column', alignItems: 'stretch', padding: '24px' }}>
+          <h3 className="section-title" style={{ marginBottom: '12px' }}>Orçamento por Categoria</h3>
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+            Controle de limites por categoria. Orçamento zero é mantido explicitamente como R$ 0,00.
+          </p>
+        </div>
+      )}
+
+      {/* 5. ABA GRÁFICOS & MÉTRICAS */}
       {activeTab === 'analytics' && (
         <div>
+          <FinancialCharts
+            transactions={transactions}
+            categories={categories}
+            formatCurrency={formatCurrency}
+          />
           <ExpenseAnalytics
             transactions={transactions}
             categories={categories}
@@ -211,110 +326,52 @@ export default function App() {
         </div>
       )}
 
-      {/* 3. EXTRATO DE TRANSAÇÕES */}
-      {activeTab === 'transactions' && (
-        <div>
-          <div className="section-title-bar" style={{ marginBottom: '16px' }}>
-            <h3 className="section-title">Extrato de Lançamentos</h3>
-            <button
-              onClick={() => { setEditingTransaction(null); setIsModalOpen(true); }}
-              className="btn-primary"
-              style={{ width: 'auto', padding: '8px 14px', fontSize: '12px' }}
-            >
-              + Novo
-            </button>
-          </div>
-
-          <TransactionFeed
-            transactions={transactions}
-            accounts={accounts}
-            categories={categories}
-            formatCurrency={formatCurrency}
-            onEditTransaction={(t) => { setEditingTransaction(t); setIsModalOpen(true); }}
-            onDeleteTransaction={handleDeleteTransaction}
-            onToggleStatus={handleToggleStatus}
-          />
-        </div>
+      {/* 6. ABA IA RAZÃO & CENÁRIOS (FASE 7) */}
+      {activeTab === 'ai_predictive' && (
+        <AIPredictivePanel
+          state={state}
+          formatCurrency={formatCurrency}
+        />
       )}
 
-      {/* 4. CARTÕES E FATURAS */}
-      {activeTab === 'invoices' && (
-        <div>
-          <h3 className="section-title" style={{ marginBottom: '16px' }}>
-            Gestão do Ciclo de Faturas
-          </h3>
-          <InvoiceCycleCard
-            card={primaryCard}
-            invoice={currentInvoice}
-            formatCurrency={formatCurrency}
-            onPayInvoice={handlePayInvoice}
-          />
-        </div>
-      )}
-
-      {/* 5. COMPROMISSOS */}
-      {activeTab === 'commitments' && (
-        <div>
-          <h3 className="section-title" style={{ marginBottom: '16px' }}>
-            Compromissos e Obrigações Futuras
-          </h3>
-          <div className="transaction-list">
-            {commitments.length === 0 ? (
-              <div className="summary-card" style={{ padding: '24px', justifyContent: 'center', color: 'var(--text-muted)' }}>
-                Nenhum compromisso pendente.
-              </div>
-            ) : (
-              commitments.map((c, idx) => (
-                <div key={idx} className="transaction-card-item">
-                  <div className="tx-left">
-                    <div className="tx-icon-box" style={{ background: 'var(--color-pending-bg)', color: 'var(--color-pending)' }}>
-                      📅
-                    </div>
-                    <div className="tx-details">
-                      <span className="tx-title">{c.description || 'Compromisso'}</span>
-                      <span className="tx-subtitle">Vencimento: {c.date}</span>
-                    </div>
-                  </div>
-                  <div className="tx-right">
-                    <span className="tx-amount font-mono-tabular" style={{ color: 'var(--color-pending)' }}>
-                      {formatCurrency(c.amountCents || 0)}
-                    </span>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 6. AJUSTES & BACKUP */}
-      {activeTab === 'settings' && (
+      {/* 7. ABA EXTRATOR & OPEN FINANCE */}
+      {activeTab === 'importer' && (
         <div className="summary-card" style={{ flexDirection: 'column', alignItems: 'stretch', padding: '24px' }}>
-          <h3 className="section-title" style={{ marginBottom: '8px' }}>
-            Configurações & Backup
-          </h3>
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
-            Exportação versionada em JSON e recuperação segura de backups sanitizados.
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+            <span style={{ fontSize: '28px' }}>📥</span>
+            <div>
+              <h3 className="section-title">Extrator Multiformato & Open Finance</h3>
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                Importe extratos OFX, planilhas CSV ou comprovantes Pix para reconciliação automática sem duplicar.
+              </p>
+            </div>
+          </div>
 
-          <button
-            className="btn-primary"
-            onClick={() => {
-              const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
-              const downloadAnchor = document.createElement('a');
-              downloadAnchor.setAttribute("href", dataStr);
-              downloadAnchor.setAttribute("download", `razao_backup_${todayISO}.json`);
-              document.body.appendChild(downloadAnchor);
-              downloadAnchor.click();
-              downloadAnchor.remove();
-            }}
-          >
-            Exportar Backup JSON
+          <button className="btn-primary" onClick={() => setIsImportModalOpen(true)}>
+            Abrir Importador e Extrator de Comprovantes
           </button>
         </div>
       )}
 
-      {/* Modal Acessível de Novo/Editar Lançamento */}
+      {/* 8. ABA CONQUISTAS & PERFIL DO USUÁRIO */}
+      {activeTab === 'profile' && (
+        <UserProfilePanel
+          userProfile={userProfile}
+          onUpdateProfile={setUserProfile}
+          transactions={transactions}
+          accounts={accounts}
+        />
+      )}
+
+      {/* 9. ABA PERSONALIZAÇÃO & AJUSTES */}
+      {activeTab === 'settings' && (
+        <PersonalizationPanel
+          state={state}
+          todayISO={todayISO}
+        />
+      )}
+
+      {/* Modais Acessíveis */}
       <TransactionModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -322,6 +379,16 @@ export default function App() {
         accounts={accounts}
         categories={categories}
         initialData={editingTransaction}
+      />
+
+      <ImportReconciliationModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        existingTransactions={transactions}
+        accounts={accounts}
+        categories={categories}
+        formatCurrency={formatCurrency}
+        onImportConfirmed={handleImportConfirmed}
       />
     </AppShell>
   );
