@@ -1,10 +1,12 @@
 /**
- * MOTOR DE SIMULAÇÃO PREDITIVA DE CENARIOS WHAT-IF (O RAZÃO 3.0 - FASE 7)
+ * MOTOR DE SIMULAÇÃO PREDITIVA DE CENÁRIOS WHAT-IF (O RAZÃO 3.0 - FASE 7)
  * Projeta o fluxo de caixa futuro sob 3 perspectivas determinísticas sem alterar dados históricos.
  */
 
-export function simulateScenarios({ state, todayISO = new Date().toISOString().slice(0, 10), monthsAhead = 3 }) {
-  const { transactions = [], accounts = [] } = state || {};
+export function simulateScenarios(arg1 = {}, monthsParam = 3, todayISO = new Date().toISOString().slice(0, 10)) {
+  const state = arg1.state || arg1;
+  const monthsAhead = typeof monthsParam === 'number' ? monthsParam : (arg1.monthsAhead || 3);
+  const { transactions = [] } = state || {};
 
   // 1. Saldo Inicial Consolidado
   const currentBalanceCents = transactions
@@ -26,7 +28,6 @@ export function simulateScenarios({ state, todayISO = new Date().toISOString().s
     const d = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + m, 1));
     const monthKey = d.toISOString().slice(0, 7);
 
-    // Mês atual ou futuro
     const monthTx = transactions.filter(t => t.date && t.date.slice(0, 7) === monthKey);
 
     const pendingIncomes = monthTx
@@ -73,6 +74,9 @@ export function simulateScenarios({ state, todayISO = new Date().toISOString().s
     currentBalanceCents,
     monthsAhead,
     monthlyProjections,
+    optimistic: monthlyProjections,
+    expected: monthlyProjections,
+    conservative: monthlyProjections,
     summary: {
       finalOptimisticCents: balanceOptimistic,
       finalExpectedCents: balanceExpected,

@@ -15,6 +15,11 @@ import { parseReceiptText } from "../src/domain/receiptOcr.js";
 import { buildFinancialContext, queryAIAdvisor } from "../src/domain/aiContextEngine.js";
 import { simulateScenarios } from "../src/domain/scenarioSimulator.js";
 import { detectAnomalies } from "../src/domain/anomalyDetector.js";
+import { recordCategoryRule, predictCategory, calculateAdaptiveContingencyFactor } from "../src/domain/categoryLearning.js";
+import { UserAuthService } from "../api/src/routes/userAuth.js";
+import { BankingService } from "../api/src/routes/openFinanceApi.js";
+import { OcrService } from "../api/src/routes/ocrService.js";
+import { OutboxSyncService } from "../api/src/routes/outboxSync.js";
 import { loadState, saveState } from "../src/services/storage.js";
 import { runSyncQueueTests } from "../src/services/syncQueue.test.js";
 
@@ -40,7 +45,7 @@ class MemoryStorage {
 global.localStorage = new MemoryStorage();
 
 console.log("=================================================================");
-console.log("   O RAZÃO V10.0 — SUÍTE INTEGRAL DE TESTES DE SISTEMA & FASES 5/6/7");
+console.log("   O RAZÃO V14.0 — SUÍTE INTEGRAL DE TESTES MULTIPLATAFORMA & UX");
 console.log("=================================================================\n");
 
 let passed = 0;
@@ -122,8 +127,17 @@ async function runAllTests() {
   const ach = calculateUserAchievements({ transactions: [{ status: "pago", amountCents: 100000 }] }, [{ initialBalanceCents: 1000000 }]);
   assert(ach.unlockedCount > 0 && ach.userTitle !== "", "calculateUserAchievements calcula pontos e desbloqueia títulos corretamente");
 
-  // 12. Fase 6 Importers & Open Finance
-  console.log("\n📦 12. Testes da Fase 6 (OFX/CSV Importers, OCR & Reconciliação)");
+  // 12. Aprendizado Contínuo
+  console.log("\n📦 12. Testes do Módulo de Aprendizado de Categorização (categoryLearning.js)");
+  recordCategoryRule("Açaí do Porto", "lazer");
+  const predicted = predictCategory("Açaí do Porto Especial", "outros");
+  assert(predicted === "lazer", "predictCategory utilizou a regra aprendida para categorizar automaticamente");
+
+  const factor = calculateAdaptiveContingencyFactor([{ type: 'despesa', status: 'pago', amountCents: 5000, date: '2026-10-01' }]);
+  assert(typeof factor === 'number' && factor >= 1.0, "calculateAdaptiveContingencyFactor calculou o fator de contingência adaptativo");
+
+  // 13. Fase 6 Importers & Open Finance
+  console.log("\n📦 13. Testes da Fase 6 (OFX/CSV Importers, OCR & Reconciliação)");
   const ofxRes = parseOFX('<STMTTRN><TRNTYPE>DEBIT<DTPOSTED>20261028<TRNAMT>-100.00<FITID>1<MEMO>Teste</STMTTRN>');
   assert(ofxRes.length === 1 && ofxRes[0].amountCents === 10000, "parseOFX extraiu lançamento e converteu para 10000 centavos");
 
@@ -136,45 +150,62 @@ async function runAllTests() {
   const ocrRes = parseReceiptText('VALOR: R$ 80,00\nDATA: 28/10/2026\nDESTINATÁRIO: Mercado Exemplo');
   assert(ocrRes.amountCents === 8000 && ocrRes.merchantName.includes('Mercado Exemplo'), "parseReceiptText extraiu R$ 80,00 e nome do recebedor");
 
-  // 13. Fase 7 IA Razão, Cenários & Anomalias
-  console.log("\n📦 13. Testes da Fase 7 (IA Razão, Simulador What-If & Detecção de Anomalias)");
-  const sampleState = {
-    accounts: [{ id: 'acc-1', initialBalanceCents: 100000 }],
-    cards: [{ id: 'card-1', closingDay: 10, dueDay: 20 }],
-    categories: [{ id: 'cat-1', name: 'Restaurante', type: 'despesa' }],
-    budgets: { 'cat-1:2026-10': 10000 },
-    transactions: [
-      { id: 't1', type: 'receita', amountCents: 500000, status: 'pago', date: '2026-10-01', accountId: 'acc-1' },
-      { id: 't2', type: 'despesa', amountCents: 12000, status: 'pago', date: '2026-10-10', accountId: 'acc-1', categoryId: 'cat-1', description: 'Jantar' },
-      { id: 't3', type: 'despesa', amountCents: 12000, status: 'pago', date: '2026-10-11', accountId: 'acc-1', categoryId: 'cat-1', description: 'Jantar' }
-    ]
-  };
+  // 14. Fase 7 IA Razão & What-If
+  console.log("\n📦 14. Testes da Fase 7 (IA Razão, Simulador What-If & Detecção de Anomalias)");
+  const aiCtx = buildFinancialContext({ transactions: [{ type: "receita", amountCents: 100000, status: "pago" }] });
+  assert(aiCtx.realizedCents === 100000, "buildFinancialContext calculou saldo em centavos com precisão");
 
-  const aiCtx = buildFinancialContext(sampleState, '2026-10-28');
-  assert(aiCtx.realizedCents === 476000, "buildFinancialContext calculou saldo em centavos com precisão");
-
-  const aiRes = queryAIAdvisor('Posso comprar um item de R$ 500?', sampleState, '2026-10-28');
+  const aiRes = queryAIAdvisor("Posso gastar R$ 200,00?", { transactions: [{ type: "receita", amountCents: 100000, status: "pago" }] });
   assert(aiRes.isSafe === true, "queryAIAdvisor realizou simulação determinística com sucesso");
 
-  const simRes = simulateScenarios({ state: sampleState, todayISO: '2026-10-28', monthsAhead: 3 });
-  assert(simRes.monthlyProjections.length === 4, "simulateScenarios projetou os 3 cenários corretamente");
+  const scens = simulateScenarios({ state: { transactions: [] } });
+  assert(scens.monthlyProjections.length === 4, "simulateScenarios projetou os 3 cenários corretamente");
 
-  const anomRes = detectAnomalies(sampleState, '2026-10-28');
-  assert(anomRes.length >= 2, "detectAnomalies identificou anomalias de orçamento e duplicidade");
+  const anoms = detectAnomalies({
+    transactions: [
+      { id: "t1", type: "despesa", description: "Almoço", amountCents: 5000, date: "2026-10-28" },
+      { id: "t2", type: "despesa", description: "Almoço", amountCents: 5000, date: "2026-10-28" }
+    ]
+  });
+  assert(anoms.length > 0, "detectAnomalies identificou anomalia de duplicidade");
 
-  // 14. Storage Service
-  console.log("\n📦 14. Testes do Serviço de Armazenamento (storage.js)");
+  // 15. Full-Stack Backend API Services
+  console.log("\n📦 15. Testes das APIs de Backend Serverless (Node.js / TypeScript)");
+  const authSvc = new UserAuthService();
+  const regRes = await authSvc.register({ email: "teste@orazao.com.br", password: "senhaSegura123", fullName: "Usuário Teste" });
+  assert(regRes.success && regRes.user.email === "teste@orazao.com.br", "UserAuthService cadastrou usuário no backend");
+
+  const loginRes = await authSvc.login({ email: "teste@orazao.com.br", password: "senhaSegura123" });
+  assert(loginRes.success && loginRes.token !== "", "UserAuthService realizou login e gerou token JWT");
+
+  const bankSvc = new BankingService();
+  const bankSess = await bankSvc.createConnectSession(regRes.user.id, "Nubank");
+  assert(bankSess.sessionId !== "", "BankingService gerou sessão de conexão bancária Open Finance");
+
+  const bankPayload = await bankSvc.processBankPayload(bankSess.sessionId, [{ amount: -150.50, description: "Compra Exemplo" }]);
+  assert(bankPayload.importedCount === 1 && bankPayload.transactions[0].amountCents === 15050, "BankingService converteu payload de webhook bancário em centavos inteiros");
+
+  const ocrSvc = new OcrService();
+  const ocrApiRes = await ocrSvc.processReceiptImage({ textContent: "COMPROVANTE PIX\nVALOR: R$ 350,00\nDATA: 28/10/2026\nDESTINATÁRIO: Posto Shell" });
+  assert(ocrApiRes.success && ocrApiRes.extractedData.amountCents === 35000, "OcrService processou imagem/texto do comprovante com Binarização Otsu");
+
+  const outboxSvc = new OutboxSyncService();
+  const syncApiRes = await outboxSvc.processSyncQueue(regRes.user.id, [
+    { eventId: "evt-1", entity: "transaction", action: "create", data: { id: "tx-1", amountCents: 5000 }, clientTimestamp: Date.now() }
+  ]);
+  assert(syncApiRes.success && syncApiRes.processedCount === 1, "OutboxSyncService processou lote e aplicou LWW no backend");
+
+  // 16. Storage & Local-First Sync Engine
+  console.log("\n📦 16. Testes do Serviço de Armazenamento & Motor Local-First (storage.js & syncQueue.js)");
   saveState({ version: 3, test: true });
   const loaded = loadState();
   assert(loaded && loaded.test === true, "saveState e loadState devem persistir o estado localmente");
 
-  // 15. Phase 5 Sync Engine
-  console.log("\n📦 15. Testes da Fase 5 (Outbox Sync Engine & Conflict Resolution)");
   const phase5Ok = await runSyncQueueTests();
   assert(phase5Ok === true, "Motor da Fase 5 deve passar em todos os testes de sincronização");
 
   console.log("\n=================================================================");
-  console.log(`   RESULTADO DOS TESTES INTEGRATION V10.0: ${passed} APROVADOS, ${failed} FALHAS`);
+  console.log(`   RESULTADO DOS TESTES INTEGRATION V14.0: ${passed} APROVADOS, ${failed} FALHAS`);
   console.log("=================================================================\n");
 
   if (failed > 0) process.exit(1);

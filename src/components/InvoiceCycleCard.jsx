@@ -1,7 +1,8 @@
 import React from 'react';
 
 /**
- * CARD DE CICLO DE FATURA DE CARTÃO DE CRÉDITO (O RAZÃO 6.0)
+ * CARD DE CICLO DE FATURA DE CARTÃO DE CRÉDITO (O RAZÃO 13.0)
+ * Inclui o indicador "Melhor Dia de Compra" e barra de uso do limite.
  */
 
 export function InvoiceCycleCard({ card, invoice, formatCurrency, onPayInvoice }) {
@@ -13,6 +14,11 @@ export function InvoiceCycleCard({ card, invoice, formatCurrency, onPayInvoice }
   const usagePercentage = Math.min(100, Math.round((usedCents / limitCents) * 100));
 
   const isClosed = invoice.status === 'fechada' || invoice.status === 'vencida';
+  const closingDay = card.closingDay || 10;
+  const dueDay = card.dueDay || 20;
+
+  // Cálculo do Melhor Dia de Compra (Dia imediatamente posterior ao fechamento)
+  const bestPurchaseDay = (closingDay % 31) + 1;
 
   return (
     <div className="summary-card" style={{ flexDirection: 'column', alignItems: 'stretch', padding: '20px', marginBottom: '24px' }}>
@@ -24,7 +30,7 @@ export function InvoiceCycleCard({ card, invoice, formatCurrency, onPayInvoice }
           <div>
             <h4 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)' }}>{card.name}</h4>
             <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-              Fechamento: Dia {card.closingDay} • Vencimento: Dia {card.dueDay}
+              Fechamento: Dia {closingDay} • Vencimento: Dia {dueDay}
             </p>
           </div>
         </div>
@@ -40,6 +46,30 @@ export function InvoiceCycleCard({ card, invoice, formatCurrency, onPayInvoice }
         }}>
           {invoice.status}
         </span>
+      </div>
+
+      {/* PAINEL DE ESTRATÉGIA: MELHOR DIA DE COMPRA (Inspirado no Mobills) */}
+      <div style={{
+        background: 'var(--color-income-bg)',
+        border: '1px solid var(--color-income-border)',
+        borderRadius: 'var(--radius-md)',
+        padding: '10px 14px',
+        marginBottom: '14px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '16px' }}>💡</span>
+          <div>
+            <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--color-income)', display: 'block', lineHeight: '1.2' }}>
+              Melhor Dia de Compra: Dia {bestPurchaseDay}
+            </span>
+            <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+              Compre a partir do dia {bestPurchaseDay} para ter até 40 dias de prazo para pagar no ciclo seguinte.
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* BARRA DE USO DO LIMITE */}

@@ -1,0 +1,139 @@
+// ============================================================================
+// O RAZÃO — SCHEMA RELACIONAL POSTGRESQL (PRISMA ORM)
+// ============================================================================
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String
+  fullName      String
+  phone         String?
+  avatarEmoji   String   @default("👨‍💼")
+  titleEquipped String   @default("Iniciado do Razão")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  accounts         Account[]
+  cards            CreditCard[]
+  transactions     Transaction[]
+  categories       Category[]
+  syncEvents       SyncEvent[]
+  openFinanceTokens OpenFinanceToken[]
+  ocrJobs          OCRJob[]
+}
+
+model Account {
+  id                  String   @id @default(uuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                String
+  type                String   // corrente | poupanca | investimento
+  initialBalanceCents BigInt   @default(0) // INTEGER CENTS
+  color               String   @default("#2563EB")
+  createdAt           DateTime @default(now())
+
+  transactions Transaction[]
+}
+
+model CreditCard {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  limitCents  BigInt   // INTEGER CENTS
+  closingDay  Int
+  dueDay      Int
+  brand       String   @default("black")
+  createdAt   DateTime @default(now())
+
+  invoices Invoice[]
+}
+
+model Invoice {
+  id             String     @id @default(uuid())
+  cardId         String
+  card           CreditCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  monthKey       String     // YYYY-MM
+  closingDate    String     // YYYY-MM-DD
+  dueDate        String     // YYYY-MM-DD
+  totalCents     BigInt     @default(0) // INTEGER CENTS
+  paidCents      BigInt     @default(0) // INTEGER CENTS
+  status         String     @default("aberta") // aberta | fechada | paga
+  createdAt      DateTime   @default(now())
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  icon      String   @default("📝")
+  type      String   @default("despesa") // despesa | receita
+  createdAt DateTime @default(now())
+
+  transactions Transaction[]
+}
+
+model Transaction {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type             String   // receita | despesa | transferencia
+  description      String
+  amountCents      BigInt   // INTEGER CENTS PRECISÃO ABSOLUTA
+  date             String   // YYYY-MM-DD (Data Local Operacional)
+  status           String   @default("pago") // pago | pendente
+  accountId        String
+  account          Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  categoryId       String?
+  category         Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  fitid            String?  @unique // Hash único bancário para desduplicação Open Finance
+  sourceType       String   @default("manual") // manual | open_finance | ocr_pix | csv | ofx
+  linkedInvoiceKey String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model SyncEvent {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventId   String   @unique
+  entity    String   // transaction | account | card | category
+  action    String   // create | update | delete
+  payload   String   // JSON string do evento
+  clientTs  BigInt   // Timestamp local do dispositivo em ms
+  serverTs  BigInt   // Timestamp de recebimento no servidor em ms
+  status    String   @default("processed") // processed | conflict_resolved
+  createdAt DateTime @default(now())
+}
+
+model OpenFinanceToken {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itemId       String   @unique // Item ID da Pluggy
+  institution  String
+  status       String   @default("ACTIVE") // ACTIVE | UPDATING | LOGIN_ERROR | REVOKED
+  lastSyncedAt DateTime @default(now())
+  createdAt    DateTime @default(now())
+}
+
+model OCRJob {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  imageUrl    String
+  status      String   @default("processing") // processing | completed | failed
+  extractedData String? // JSON string dos dados extraídos
+  createdAt   DateTime @default(now())
+}
