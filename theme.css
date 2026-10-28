@@ -1,0 +1,114 @@
+/* ==========================================================================
+   O RAZÃO — DESIGN SYSTEM "DEEP TECH DARK MODE" (VERSION 3.0)
+   Inspirado na identidade visual oficial e focado em precisão executiva.
+   ========================================================================== */
+
+:root {
+  /* Cores Principais da Marca (Brand Navy & Blue) */
+  --bg-app: #020617; /* Slate 950 base */
+  --bg-app-radial: radial-gradient(circle at 50% 0%, #0a192f 0%, #020617 75%);
+  --surface-card: rgba(15, 23, 42, 0.75);
+  --surface-card-hover: rgba(30, 41, 59, 0.85);
+  --border-glass: rgba(255, 255, 255, 0.08);
+  --border-glass-active: rgba(0, 180, 216, 0.4);
+
+  /* Gradiente e Azul da Logo */
+  --brand-blue-primary: #0077B6;
+  --brand-blue-cyan: #00B4D8;
+  --brand-blue-gradient: linear-gradient(135deg, #0077B6 0%, #00B4D8 100%);
+  --brand-blue-glow: 0 0 20px rgba(0, 180, 216, 0.25);
+
+  /* Indicadores Financeiros WCAG 2.2 AA */
+  --color-income: #10B981; /* Verde Esmeralda Neon */
+  --color-income-bg: rgba(16, 185, 129, 0.12);
+  --color-expense: #EF4444; /* Vermelho Rubi */
+  --color-expense-bg: rgba(239, 68, 68, 0.12);
+  --color-transfer: #8B5CF6; /* Roxo Elétrico */
+  --color-transfer-bg: rgba(139, 92, 246, 0.12);
+  --color-pending: #F59E0B; /* Dourado Âmbar */
+  --color-pending-bg: rgba(245, 158, 11, 0.12);
+
+  /* Tipografia e Numerais Tabulares */
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Sombra e Desfoque Glassmorphism */
+  --shadow-elevation-1: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+  --shadow-elevation-2: 0 10px 30px -5px rgba(0, 0, 0, 0.7);
+  --backdrop-blur: blur(16px);
+
+  /* Acessibilidade e Foco */
+  --focus-ring: 0 0 0 3px rgba(0, 180, 216, 0.5);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg-app);
+  background-image: var(--bg-app-radial);
+  color: #F8FAFC;
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar Personalizada e Discreta */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(2, 6, 23, 0.5);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 180, 216, 0.4);
+}
+
+/* Numerais Monospaçados para Alinhamento Perfeito */
+.font-mono-tabular {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Glass Card Reutilizável */
+.glass-card {
+  background: var(--surface-card);
+  backdrop-filter: var(--backdrop-blur);
+  -webkit-backdrop-filter: var(--backdrop-blur);
+  border: 1px solid var(--border-glass);
+  border-radius: 16px;
+  box-shadow: var(--shadow-elevation-1);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: var(--shadow-elevation-2);
+}
+
+.glass-card-interactive {
+  cursor: pointer;
+}
+.glass-card-interactive:hover {
+  border-color: var(--border-glass-active);
+  transform: translateY(-2px);
+}
+
+/* Animações e Transições */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
