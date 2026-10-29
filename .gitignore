@@ -1,0 +1,9 @@
+node_modules/
+dist/
+dist-desktop/
+.razao-desktop-test-profile/
+.razao-web-test-profile/
+test-beta18.log
+npm-audit.json
+coverage/
+*.tmp

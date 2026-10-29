@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const modal = readFileSync(new URL('../src/components/DiagnosticModal.jsx', import.meta.url), 'utf8');
+const backup = readFileSync(new URL('../src/domain/backup.js', import.meta.url), 'utf8');
+const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+assert.match(modal, /handleExportHistoricalBackup/);
+assert.match(modal, /serializeHistoricalBackup\(loaded\?\.state, loaded\?\.createdAt\)/);
+assert.match(modal, /saveFileDialog\(\{ defaultName, content \}\)/);
+assert.match(modal, /URL\.revokeObjectURL\(url\)/);
+assert.match(modal, /aria-label=\{`Exportar/);
+assert.match(backup, /validateHistoricalBackupState\(state, createdAt\)/);
+assert.match(backup, /createBackup\(validated\.state, timestamp\)/);
+assert.match(backup, /O backup histórico não pode ser exportado/);
+assert.ok(packageJson.scripts.test.includes('test-backup-export.mjs'));
+assert.ok(packageJson.scripts.test.includes('test-backup-export-integration.mjs'));
+console.log('Historical backup export integration: 10 checks passed, 0 failed');

@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+const app = await readFile(new URL('../src/App.jsx', import.meta.url), 'utf8');
+const modal = await readFile(new URL('../src/components/DiagnosticModal.jsx', import.meta.url), 'utf8');
+const main = await readFile(new URL('../electron/main.cjs', import.meta.url), 'utf8');
+assert.match(app, /onRestoreBackup=\{handleRestoreBackup\}/);
+assert.match(app, /const validation = validateHistoricalBackupState\(restoredState\)/, 'ponto de persistência revalida backup independentemente do modal');
+assert.match(app, /O backup foi recusado antes da restauração/, 'backup semanticamente inválido não chega à sanitização/persistência');
+assert.match(app, /await saveStateWithRecovery\(\{ \.\.\.nextState, userProfile: restoredProfile \}\)/);
+assert.match(app, /if \(!persisted\?\.success\)/);
+assert.match(main, /desktop:restoreStateWithRecovery/);
+assert.match(modal, /parseBackupText\(await file\.text\(\)\)/);
+assert.match(modal, /window\.confirm\(summary\)/);
+assert.match(modal, /25 \* 1024 \* 1024/);
+assert.match(main, /fs\.promises\.writeFile\(result\.filePath, content/);
+console.log('Backup integration checks: 10 passed, 0 failed');

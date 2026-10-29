@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict';
+import { generateRecurringOccurrences, occurrenceDate, validateRecurringRule } from '../src/domain/recurring.js';
+
+const base = { id: 'r1', description: 'Internet', amountCents: 12990, type: 'despesa', dayOfMonth: 31, accountId: 'acc-1', active: true, startDate: '2026-10-01' };
+assert.equal(validateRecurringRule(base).valid, true, 'Regra mensal válida é aceita');
+assert.equal(validateRecurringRule({ ...base, type: undefined }).valid, true, 'Regra antiga sem tipo explícito mantém compatibilidade como despesa');
+assert.equal(validateRecurringRule({ ...base, amountCents: 0 }).valid, false, 'Valor zero é rejeitado');
+assert.equal(validateRecurringRule({ ...base, dayOfMonth: 32 }).valid, false, 'Dia fora do mês é rejeitado');
+assert.equal(validateRecurringRule({ ...base, endDate: '2026-09-30' }).valid, false, 'Período invertido é rejeitado');
+assert.equal(occurrenceDate(2027, 1, 31), '2027-02-28', 'Dia 31 é ajustado ao último dia de fevereiro');
+const occurrences = generateRecurringOccurrences({ recurring: [base], fromISO: '2026-10-28', monthsAhead: 3 });
+assert.deepEqual(occurrences.map(item => item.date), ['2026-10-31', '2026-11-30', '2026-12-31', '2027-01-31'], 'Gera datas mensais no horizonte com ajuste de calendário');
+const existing = [{ recurringId: 'r1', recurringOccurrenceDate: '2026-11-30' }];
+const withoutDuplicate = generateRecurringOccurrences({ recurring: [base], transactions: existing, fromISO: '2026-10-28', monthsAhead: 3 });
+assert.equal(withoutDuplicate.some(item => item.date === '2026-11-30'), false, 'Não duplica ocorrência já registrada');
+const withoutDuplicateByKey = generateRecurringOccurrences({ recurring: [base], transactions: [{ idempotencyKey: 'recurring:r1:2026-11-30' }], fromISO: '2026-10-28', monthsAhead: 3 });
+assert.equal(withoutDuplicateByKey.some(item => item.date === '2026-11-30'), false, 'Chave idempotente também remove projeção duplicada');
+assert.equal(generateRecurringOccurrences({ recurring: [{ ...base, active: false }], fromISO: '2026-10-28', monthsAhead: 1 }).length, 0, 'Regra pausada não gera compromissos');
+assert.equal(generateRecurringOccurrences({ recurring: [{ ...base, endDate: '2026-11-01' }], fromISO: '2026-10-28', monthsAhead: 3 }).length, 1, 'Respeita data final');
+assert.throws(() => generateRecurringOccurrences({ recurring: [base], fromISO: '28/10/2026' }), /ISO válida/, 'Rejeita data inicial inválida');
+assert.throws(() => generateRecurringOccurrences({ recurring: [base], fromISO: '2026-10-28', monthsAhead: 37 }), /0 e 36/, 'Limita horizonte para evitar geração excessiva');
+console.log('Recurring rule tests: 12 passed, 0 failed');

@@ -1,0 +1,28 @@
+O RAZAO v1.22.0-beta.18 — EVIDENCIAS AUTOMATIZADAS
+Data da execução: 28/10/2026
+Runtime: Node.js v22.16.0 no ambiente de trabalho da sessão
+
+REGRESSÃO
+- Comando: npm test
+- Resultado: exit code 0
+- Scripts da cadeia: 55; arquivos test-*.mjs conectados: 55/55
+- Domínio: 101 aprovados, 0 falhas
+- Grupo legado test-artifact: 10 grupos aprovados, 0 falhas
+- Ver detalhes em npm-test-beta18.log.
+
+SINTAXE
+- node --check: arquivos .js/.mjs/.cjs sob src, api, electron, scripts; exit code 0, sem erros.
+- JSX parse/transpile TypeScript: 23 arquivos .jsx, zero falhas.
+
+SEGURANÇA ESTÁTICA
+- Contratos estáticos de CSP/Electron/preload/origem/perfil isolado: 23 verificações, 0 falhas.
+- Busca por padrões comuns de segredos: nenhuma chave privada, arquivo .env, PEM, P12 ou credencial real encontrada. Ocorrências de senhas nos scripts são dados de teste fictícios deliberados.
+
+DEPENDÊNCIAS
+- Geração de package-lock offline: não concluída por ENOTCACHED; registry/transitive metadata não presente no cache. Tentativa online anterior também falhou por indisponibilidade de rede.
+- Nenhum npm audit completo, npm ci, SBOM ou build de produção executado neste ambiente.
+
+ESCOPO PROPOSITALMENTE NÃO EXECUTADO
+- Não rodou npm run build, npm run desktop:build, instalador ou executável.
+- Não houve navegação visual com React/Vite instalado, teste real de Electron/Windows, safeStorage nativo, screen reader, quota real ou crash-test.
+- A Fase 0 permanece aberta até execução manual e aprovação dos gates descritos na auditoria.

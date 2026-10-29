@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const app = fs.readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8');
+const generator = fs.readFileSync(new URL('../src/domain/recurringGeneration.js', import.meta.url), 'utf8');
+const sanitize = fs.readFileSync(new URL('../src/domain/sanitize.js', import.meta.url), 'utf8');
+const audit = fs.readFileSync(new URL('../src/domain/auditLog.js', import.meta.url), 'utf8');
+assert.match(app, /handleGenerateRecurringOccurrences/, 'A aplicação integra o fluxo de geração explícita');
+assert.match(app, /Gerar todas as recorrências do período/, 'Interface permite geração em lote');
+assert.match(app, /Gerar lançamento/, 'Interface permite geração individual');
+assert.match(app, /window\.confirm\(`\$\{summary\}/, 'Geração mostra valores e exige confirmação');
+assert.match(app, /action: 'transaction_created'/, 'Cada lançamento criado entra na auditoria');
+assert.match(generator, /idempotencyKey = `recurring:\$\{recurringId\}:\$\{date\}`/, 'A chave de idempotência é determinística');
+assert.match(generator, /!rule\.active/, 'A geração confere a regra ativa novamente');
+assert.match(generator, /accountIds\.has\(rule\.accountId\)/, 'Conta associada é validada antes de criar');
+assert.match(sanitize, /recurringOccurrenceDate: isValidISODate/, 'A data da ocorrência sobrevive à sanitização');
+assert.match(audit, /'recurringOccurrenceDate'/, 'Auditoria registra metadados da ocorrência');
+console.log('Recurring generation integration tests: 10 passed, 0 failed');

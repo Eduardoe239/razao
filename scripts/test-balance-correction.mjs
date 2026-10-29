@@ -1,0 +1,54 @@
+import assert from 'node:assert/strict';
+import { analyzeBalanceDiscrepancy, prepareBalanceAdjustment, applyBalanceAdjustment } from '../src/domain/balanceCorrection.js';
+import { reconcileAccountBalance } from '../src/domain/balanceReconciliation.js';
+
+const accounts = [
+  { id: 'checking', name: 'Conta corrente', initialBalanceCents: 10000 },
+  { id: 'savings', name: 'Poupança', initialBalanceCents: 5000 }
+];
+const baseTx = [{ id: 'salary', accountId: 'checking', type: 'receita', amountCents: 3000, date: '2026-10-01', status: 'pago' }];
+const makeResult = difference => reconcileAccountBalance({ account: accounts[0], transactions: baseTx, statementBalanceCents: 13000 + difference, asOfDate: '2026-10-28' });
+const positive = makeResult(1200);
+const negative = makeResult(-900);
+assert.equal(analyzeBalanceDiscrepancy(positive).suggestions[0].id, 'missing_income');
+assert.equal(analyzeBalanceDiscrepancy(negative).suggestions[0].id, 'missing_expense');
+assert.equal(analyzeBalanceDiscrepancy(makeResult(0)).status, 'matched');
+assert.equal(analyzeBalanceDiscrepancy({ valid: false }).status, 'invalid');
+const income = prepareBalanceAdjustment({ result: positive, account: accounts[0], accounts, adjustmentKind: 'income', description: 'Depósito não registrado', date: '2026-10-28', categoryId: 'income-cat' });
+assert.equal(income.valid, true);
+assert.equal(income.draft.amountCents, 1200);
+assert.equal(prepareBalanceAdjustment({ result: positive, account: accounts[0], accounts, adjustmentKind: 'expense', description: 'Taxa', date: '2026-10-28' }).valid, false);
+assert.equal(prepareBalanceAdjustment({ result: negative, account: accounts[0], accounts, adjustmentKind: 'income', description: 'Entrada', date: '2026-10-28' }).valid, false);
+assert.equal(prepareBalanceAdjustment({ result: negative, account: accounts[0], accounts, adjustmentKind: 'expense', description: 'Tarifa bancária', date: '2026-10-28' }).valid, true);
+assert.equal(prepareBalanceAdjustment({ result: positive, account: accounts[0], accounts, adjustmentKind: 'income', description: 'Depósito', date: '2026-10-29' }).valid, false);
+assert.equal(prepareBalanceAdjustment({ result: positive, account: accounts[0], accounts, adjustmentKind: 'income', description: '', date: '2026-10-28' }).valid, false);
+assert.equal(prepareBalanceAdjustment({ result: positive, account: accounts[0], accounts, adjustmentKind: 'transfer', description: 'Transferência', date: '2026-10-28', targetAccountId: 'checking' }).valid, false);
+const transferIn = prepareBalanceAdjustment({ result: positive, account: accounts[0], accounts, adjustmentKind: 'transfer', description: 'Transferência recebida', date: '2026-10-28', targetAccountId: 'savings' });
+assert.equal(transferIn.valid, true);
+assert.equal(transferIn.draft.accountId, 'savings');
+assert.equal(transferIn.draft.toAccountId, 'checking');
+const transferOut = prepareBalanceAdjustment({ result: negative, account: accounts[0], accounts, adjustmentKind: 'transfer', description: 'Transferência enviada', date: '2026-10-28', targetAccountId: 'savings' });
+assert.equal(transferOut.draft.accountId, 'checking');
+assert.equal(transferOut.draft.toAccountId, 'savings');
+const applied = applyBalanceAdjustment({ accounts, transactions: baseTx, result: positive, draft: income.draft, transactionId: 'adjustment-1' });
+assert.equal(applied.valid, true);
+assert.equal(applied.transaction.source, 'balance_reconciliation_adjustment');
+assert.equal(applied.transaction.reconciliationAdjustment.priorDifferenceCents, 1200);
+assert.equal(applyBalanceAdjustment({ accounts, transactions: [...baseTx, applied.transaction], result: positive, draft: income.draft, transactionId: 'adjustment-2' }).valid, false);
+assert.equal(applyBalanceAdjustment({ accounts, transactions: [...baseTx, { id: 'new-tx', accountId: 'checking', type: 'receita', amountCents: 100, date: '2026-10-27', status: 'pago' }], result: positive, draft: income.draft, transactionId: 'adjustment-3' }).valid, false);
+assert.equal(applyBalanceAdjustment({ accounts, transactions: baseTx, result: positive, draft: income.draft, transactionId: 'salary' }).valid, false);
+const expense = prepareBalanceAdjustment({ result: negative, account: accounts[0], accounts, adjustmentKind: 'expense', description: 'Tarifa bancária', date: '2026-10-28' });
+assert.equal(applyBalanceAdjustment({ accounts, transactions: baseTx, result: negative, draft: expense.draft, transactionId: 'adjustment-expense' }).valid, true);
+const appliedTransferIn = applyBalanceAdjustment({ accounts, transactions: baseTx, result: positive, draft: transferIn.draft, transactionId: 'adjustment-transfer-in' });
+assert.equal(appliedTransferIn.valid, true, 'aplica transferência recebida coerente com a diferença positiva');
+assert.equal(reconcileAccountBalance({ account: accounts[0], transactions: [...baseTx, appliedTransferIn.transaction], statementBalanceCents: positive.statementBalanceCents, asOfDate: positive.asOfDate }).differenceCents, 0, 'transferência recebida concilia o saldo calculado');
+const appliedTransferOut = applyBalanceAdjustment({ accounts, transactions: baseTx, result: negative, draft: transferOut.draft, transactionId: 'adjustment-transfer-out' });
+assert.equal(appliedTransferOut.valid, true, 'aplica transferência enviada coerente com a diferença negativa');
+assert.equal(reconcileAccountBalance({ account: accounts[0], transactions: [...baseTx, appliedTransferOut.transaction], statementBalanceCents: negative.statementBalanceCents, asOfDate: negative.asOfDate }).differenceCents, 0, 'transferência enviada concilia o saldo calculado');
+const forgedTransfer = { ...transferIn.draft, accountId: 'checking', toAccountId: 'savings' };
+assert.equal(applyBalanceAdjustment({ accounts, transactions: baseTx, result: positive, draft: forgedTransfer, transactionId: 'bad-transfer' }).valid, false);
+const alteredReference = { ...income.draft, statementBalanceCents: 999999 };
+assert.equal(applyBalanceAdjustment({ accounts, transactions: baseTx, result: positive, draft: alteredReference, transactionId: 'bad-reference' }).valid, false);
+const wrongType = { ...income.draft, type: 'despesa' };
+assert.equal(applyBalanceAdjustment({ accounts, transactions: baseTx, result: positive, draft: wrongType, transactionId: 'bad-type' }).valid, false);
+console.log('Correções de divergência: 27 verificações aprovadas.');

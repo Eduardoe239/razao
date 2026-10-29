@@ -1,0 +1,56 @@
+{
+  "name": "razao-app",
+  "private": true,
+  "version": "1.22.0-beta.20",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node scripts/test-fase0-fixtures.mjs && node scripts/test-transaction-mutation-guard.mjs && node scripts/test-money-input-validation.mjs && node scripts/test-fresh-state-safety.mjs && node scripts/test-audit-profile-isolation.mjs && node scripts/test-schema-migration-pipeline.mjs && node scripts/test-full-system.mjs && node scripts/test-desktop-security.mjs && node scripts/test-desktop-trust-boundary.mjs && node scripts/test-persistence.mjs && node scripts/test-state-validation.mjs && node scripts/test-ledger.mjs && node scripts/test-diagnostic.mjs && node scripts/test-dashboard-summary.mjs && node scripts/test-invoice-payment.mjs && node scripts/test-reconciliation.mjs && node scripts/test-balance-reconciliation.mjs && node scripts/test-balance-correction.mjs && node scripts/test-balance-correction-ui.mjs && node scripts/test-audit-log.mjs && node scripts/test-audit-integrity.mjs && node scripts/test-audit-integration.mjs && node scripts/test-backup.mjs && node scripts/test-backup-integration.mjs && node scripts/test-restore-recovery.mjs && node scripts/test-restore-recovery-integration.mjs && node scripts/test-backup-history.mjs && node scripts/test-backup-history-integration.mjs && node scripts/test-category-learning-integrity.mjs && node scripts/test-category-learning-platform-privacy.mjs && node scripts/test-historical-backup-validation.mjs && node scripts/test-backup-export.mjs && node scripts/test-backup-export-integration.mjs && node scripts/test-transaction-search.mjs && node scripts/test-transaction-search-ui.mjs && node scripts/test-recurring-rules.mjs && node scripts/test-recurring-integration.mjs && node scripts/test-recurring-generation.mjs && node scripts/test-recurring-generation-integration.mjs && node scripts/test-open-finance-demo-safety.mjs && node scripts/test-error-boundary-recovery.mjs && node scripts/test-profile-isolation-warning.mjs && node scripts/test-profile-isolation-migration.mjs && node scripts/test-budget-profile-isolation.mjs && node scripts/test-ai-profile-isolation.mjs && node scripts/test-financial-position.mjs && node scripts/test-auth-disabled-until-configured.mjs && node scripts/test-splash-security-disclosure.mjs && node scripts/test-desktop-last-known-good.mjs && node scripts/test-web-last-known-good.mjs && node scripts/test-web-restore-snapshot-consistency.mjs && node scripts/test-outbox-storage-integrity.mjs && node scripts/test-startup-recovery-flow.mjs && node scripts/test-security-and-runtime-contracts.mjs && node scripts/test-artifact.mjs",
+    "desktop:dev": "node scripts/desktop-dev.mjs",
+    "desktop:build": "vite build && electron-builder --win"
+  },
+  "dependencies": {
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "6.1.2",
+    "electron": "45.1.0",
+    "electron-builder": "26.18.1",
+    "vite": "8.3.5"
+  },
+  "build": {
+    "appId": "br.com.orazao.app",
+    "productName": "O Razão — Suas Finanças. Com Lógica.",
+    "directories": {
+      "output": "dist-desktop"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "electron/assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "installerIcon": "electron/assets/icon.ico",
+      "uninstallerIcon": "electron/assets/icon.ico",
+      "shortcutName": "O Razão"
+    }
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

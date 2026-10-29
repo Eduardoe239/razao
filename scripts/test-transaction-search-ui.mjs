@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const component = fs.readFileSync(new URL('../src/components/TransactionFeed.jsx', import.meta.url), 'utf8');
+const app = fs.readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8');
+assert.match(component, /filterTransactions/, 'feed usa função central de filtros');
+assert.match(component, /transactionsToCSV/, 'feed exporta o resultado filtrado em CSV');
+assert.match(component, /type="date"/, 'feed tem filtros de data acessíveis');
+assert.match(component, /minAmount|Valor mínimo/, 'feed expõe faixa de valores');
+assert.match(component, /Limpar filtros/, 'feed permite limpar todos os filtros');
+assert.match(component, /onClick=\{handleExportCSV\}/, 'ação de exportar está conectada ao botão');
+assert.match(component, /window\.confirm\('O arquivo CSV conterá os valores financeiros reais/, 'modo de privacidade avisa antes de exportar valores reais');
+assert.match(component, /t\.status === 'cancelado' \? \(/, 'lançamentos cancelados não alternam status com um clique acidental');
+assert.match(app, /advancedFilters=\{true\}/, 'a aba de histórico habilita filtros avançados');
+assert.match(app, /accounts=\{\[\.\.\.accounts, \.\.\.cards\]\}/, 'os filtros recebem contas e cartões');
+console.log('Transaction search/export UI integration: 10 assertions passed, 0 failed');

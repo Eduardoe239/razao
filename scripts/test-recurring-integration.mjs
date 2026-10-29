@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const app = fs.readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8');
+const manager = fs.readFileSync(new URL('../src/components/RecurringManager.jsx', import.meta.url), 'utf8');
+const commitments = fs.readFileSync(new URL('../src/domain/commitments.js', import.meta.url), 'utf8');
+assert.match(app, /<RecurringManager/, 'Gerenciador está integrado ao painel');
+assert.match(app, /handleAddRecurring/, 'Cadastro de recorrência persiste no estado');
+assert.match(app, /handleToggleRecurring/, 'Pausar e ativar recorrência estão ligados');
+assert.match(app, /handleDeleteRecurring/, 'Exclusão de recorrência está ligada');
+assert.match(app, /recurring: filteredRecurring/, 'Recorrências filtradas por perfil são usadas nos compromissos');
+assert.match(manager, /type="date"/, 'Interface aceita datas de início e fim');
+assert.match(manager, /window\.confirm/, 'Exclusão exige confirmação');
+assert.match(manager, /validateRecurringRule/, 'Cadastro valida regra antes de salvar');
+assert.match(commitments, /generateRecurringOccurrences/, 'Compromissos usam gerador determinístico');
+assert.match(commitments, /t\.date >= todayISO && t\.date <= horizonISO/, 'Pendências são limitadas ao horizonte consultado');
+console.log('Recurring integration tests: 10 passed, 0 failed');

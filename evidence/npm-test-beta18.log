@@ -1,0 +1,298 @@
+
+> razao-app@1.22.0-beta.18 test
+> node scripts/test-fase0-fixtures.mjs && node scripts/test-transaction-mutation-guard.mjs && node scripts/test-money-input-validation.mjs && node scripts/test-fresh-state-safety.mjs && node scripts/test-audit-profile-isolation.mjs && node scripts/test-schema-migration-pipeline.mjs && node scripts/test-full-system.mjs && node scripts/test-desktop-security.mjs && node scripts/test-desktop-trust-boundary.mjs && node scripts/test-persistence.mjs && node scripts/test-state-validation.mjs && node scripts/test-ledger.mjs && node scripts/test-diagnostic.mjs && node scripts/test-dashboard-summary.mjs && node scripts/test-invoice-payment.mjs && node scripts/test-reconciliation.mjs && node scripts/test-balance-reconciliation.mjs && node scripts/test-balance-correction.mjs && node scripts/test-balance-correction-ui.mjs && node scripts/test-audit-log.mjs && node scripts/test-audit-integrity.mjs && node scripts/test-audit-integration.mjs && node scripts/test-backup.mjs && node scripts/test-backup-integration.mjs && node scripts/test-restore-recovery.mjs && node scripts/test-restore-recovery-integration.mjs && node scripts/test-backup-history.mjs && node scripts/test-backup-history-integration.mjs && node scripts/test-category-learning-integrity.mjs && node scripts/test-category-learning-platform-privacy.mjs && node scripts/test-historical-backup-validation.mjs && node scripts/test-backup-export.mjs && node scripts/test-backup-export-integration.mjs && node scripts/test-transaction-search.mjs && node scripts/test-transaction-search-ui.mjs && node scripts/test-recurring-rules.mjs && node scripts/test-recurring-integration.mjs && node scripts/test-recurring-generation.mjs && node scripts/test-recurring-generation-integration.mjs && node scripts/test-open-finance-demo-safety.mjs && node scripts/test-error-boundary-recovery.mjs && node scripts/test-profile-isolation-warning.mjs && node scripts/test-profile-isolation-migration.mjs && node scripts/test-budget-profile-isolation.mjs && node scripts/test-ai-profile-isolation.mjs && node scripts/test-financial-position.mjs && node scripts/test-auth-disabled-until-configured.mjs && node scripts/test-splash-security-disclosure.mjs && node scripts/test-desktop-last-known-good.mjs && node scripts/test-web-last-known-good.mjs && node scripts/test-web-restore-snapshot-consistency.mjs && node scripts/test-outbox-storage-integrity.mjs && node scripts/test-startup-recovery-flow.mjs && node scripts/test-security-and-runtime-contracts.mjs && node scripts/test-artifact.mjs
+
+Fase 0 import fixtures: 11 assertions passed, 0 failed (20 rows + 2,000 rows).
+Transaction mutation guard: 12 assertions passed, 0 failed
+Money input validation: 31 assertions passed, 0 failed
+Fresh state and sanitizer safety: 23 assertions passed, 0 failed
+Audit profile isolation: 10 assertions passed, 0 failed
+Schema migration pipeline: 20 assertions passed, 0 failed
+=================================================================
+   O RAZÃO V1.20 — TESTES DE DOMÍNIO E INTEGRAÇÃO MOCKADA
+=================================================================
+
+📦 1. Módulo de Precisão Monetária (money.js) — 8 Testes
+  ✅ [PASS] parseToCents arredonda float com 3 casas decimais (125.099 -> 12510)
+  ✅ [PASS] parseToCents converte float exato (125.10 -> 12510)
+  ✅ [PASS] parseToCents converte string ponto ('150.50' -> 15050)
+  ✅ [PASS] parseToCents converte string vírgula ('150,50' -> 15050)
+  ✅ [PASS] parseToCents lida com valores negativos (-99.99 -> -9999)
+  ✅ [PASS] parseToCents aplica arredondamento bancário nas bordas
+  ✅ [PASS] parseToCents retorna 0 para entradas inválidas/nulas
+  ✅ [PASS] centsToFloat e formatMoney convertem centavos para string R$ formatada
+
+📦 2. Módulo de Contas e Patrimônio (accounts.js) — 6 Testes
+  ✅ [PASS] accountBalance ignora lançamentos pendentes (10000 + 5000 - 2000 = 13000)
+  ✅ [PASS] accountBalance credita conta de destino em transferências
+  ✅ [PASS] accountBalance suporta saldo negativo com precisão (-1500 centavos)
+  ✅ [PASS] calculateNetWorth soma o patrimônio de múltiplas contas
+  ✅ [PASS] calculateNetWorth retorna 0 para lista de contas vazia
+  ✅ [PASS] accountBalance preserva saldo inicial sem movimentações
+
+📦 3. Módulo de Faturas de Cartão (invoices.js) — 6 Testes
+  ✅ [PASS] calculateInvoiceCycle respeita fechamento e vencimento após o fechamento
+  ✅ [PASS] compras após fechamento entram no próximo ciclo e vencem no mês seguinte quando aplicável
+  ✅ [PASS] datas de fechamento são ajustadas para meses mais curtos sem gerar datas inválidas
+  ✅ [PASS] cardInvoices gera ciclos de fatura para meses adjacentes
+  ✅ [PASS] cardInvoices aloca compra na fatura de outubro
+  ✅ [PASS] cardInvoices não duplica compras de ciclos anteriores
+  ✅ [PASS] pagamento parcial reduz saldo da fatura sem virar nova despesa
+  ✅ [PASS] cada compra é atribuída a um único ciclo de fatura
+  ✅ [PASS] validateInvoicePayment aprova pagamento parcial de fatura
+  ✅ [PASS] validateInvoicePayment rejeita pagamento maior que o saldo devedor
+  ✅ [PASS] cardInvoices lida com cartão sem lançamentos (total 0 centavos)
+
+📦 4. Módulo de Compromissos e Dupla Contagem (commitments.js) — 5 Testes
+  ✅ [PASS] buildCommitments consolida lançamentos pendentes e compromissos recorrentes
+  ✅ [PASS] buildCommitments exclui lançamentos que já foram pagos
+  ✅ [PASS] buildCommitments inclui despesas pendentes futuras
+  ✅ [PASS] buildCommitments projeta recorrências ativas
+  ✅ [PASS] buildCommitments retorna lista vazia quando não há pendências
+
+📦 5. Módulo de Sanitização e Validação (sanitize.js) — 6 Testes
+  ✅ [PASS] isValidISODate aceita ano bissexto válido (2024-02-29)
+  ✅ [PASS] isValidISODate rejeita dia 29 de fevereiro em ano não bissexto
+  ✅ [PASS] isValidISODate rejeita meses inexistentes ou strings corrompidas
+  ✅ [PASS] sanitizeTransaction converte valor legado quando possui ID estável
+  ✅ [PASS] sanitizeTransaction não inventa ID para registro financeiro sem identificador
+  ✅ [PASS] sanitizeTransaction rejeita status desconhecido
+  ✅ [PASS] sanitizeState recupera e normaliza estado legado corrompido
+
+📦 6. Módulo de Identificadores Únicos (uid.js) — 4 Testes
+  ✅ [PASS] uid gera string de identificador único com tamanho suficiente
+  ✅ [PASS] uid garante zero colisão em lote de 1.000 chamadas consecutivas
+  ✅ [PASS] duas chamadas consecutivas de uid geram resultados distintos
+  ✅ [PASS] uid gera identificadores sem espaços em branco
+
+📦 7. Módulo de Orçamento (budget.js) — 5 Testes
+  ✅ [PASS] setCategoryBudget grava limite da categoria em centavos
+  ✅ [PASS] budgetForMonth preserva o orçamento zero explícito sem tratar como indefinido
+  ✅ [PASS] budgetForMonth retorna null para categoria sem orçamento configurado
+  ✅ [PASS] setCategoryBudget atualiza valor existente sem duplicar chave
+  ✅ [PASS] budgetForMonth trata mapa nulo de orçamento com resiliência
+
+📦 8. Módulo de Economias e Metas (savings.js) — 5 Testes
+  ✅ [PASS] calculateSavingsBalance calcula saldo (100000 + 50000 - 20000 = 130000)
+  ✅ [PASS] calculateSavingsBalance preserva aporte inicial sem aportes adicionais
+  ✅ [PASS] calculateSavingsBalance isola lançamentos apenas da meta correspondente pelo goalId
+  ✅ [PASS] calculateSavingsBalance responde 0 para meta indefinida
+  ✅ [PASS] calculateSavingsBalance aceita saldo negativo em resgates maiores que a reserva
+
+📦 9. Módulo de Migração de Schemas (migrations.js) — 5 Testes
+  ✅ [PASS] migrateData eleva versão do schema de 1 para 4
+  ✅ [PASS] migrateData converte campo float 'amount' para 'amountCents' em centavos inteiros
+  ✅ [PASS] migrateData migra schema v2 para v4 sem alterar centavos já existentes
+  ✅ [PASS] migrateData atualiza estado schema v3 para v4 sem alterar centavos já existentes
+  ✅ [PASS] migrateData inicializa estado vazio versionado para valores nulos
+
+📦 10. Módulo de Projeção Futurista (forecast.js) — 5 Testes
+  ✅ [PASS] calculateForecast gera projeção contendo o mês atual + N meses à frente
+  ✅ [PASS] calculateForecast calcula o saldo projetado em centavos para cada mês
+  ✅ [PASS] calculateForecast inicia a projeção no mês da data operacional
+  ✅ [PASS] calculateForecast lida com histórico zerado sem gerar exceções
+  ✅ [PASS] calculateForecast formata as chaves de ano/mês corretamente em viradas de ano
+
+📦 11. Módulo de Gamificação e Conquistas (achievements.js) — 5 Testes
+  ✅ [PASS] calculateUserAchievements desbloqueia conquistas com base na atividade
+  ✅ [PASS] calculateUserAchievements calcula a pontuação total acumulada
+  ✅ [PASS] calculateUserAchievements atribui os títulos de honra correspondentes
+  ✅ [PASS] calculateUserAchievements retorna a lista completa de conquistas com progresso
+  ✅ [PASS] calculateUserAchievements responde status inicial para novos usuários
+
+📦 12. Módulo de Aprendizado Contínuo (categoryLearning.js) — 6 Testes
+  ✅ [PASS] predictCategory categoriza por correspondência da regra aprendida
+  ✅ [PASS] predictCategory insensível a maiúsculas/minúsculas
+  ✅ [PASS] predictCategory mantém categoria padrão quando não há regra aprendida
+  ✅ [PASS] recordCategoryRule permite reclassificar e atualizar regra existente
+  ✅ [PASS] calculateAdaptiveContingencyFactor gera fator >= 1.0 para alta volatilidade
+  ✅ [PASS] calculateAdaptiveContingencyFactor retorna fator padrão 1.15 para histórico vazio
+
+📦 13. Extratores, OCR & Reconciliação (importers, ocr, reconciliation) — 8 Testes
+  ✅ [PASS] parseOFX extrai débito e converte para amountCents positivo
+  ✅ [PASS] parseCSV extrai linhas de CSV brasileiro com separador ponto e vírgula
+  ✅ [PASS] parseReceiptText extrai valor em centavos e nome do recebedor de comprovantes Pix
+  ✅ [PASS] reconcileTransactions envia possível duplicata por valor/data para revisão manual
+  ✅ [PASS] reconcileTransactions classifica lançamento inédito como 'unique'
+  ✅ [PASS] parseOFX responde lista vazia para conteúdo corrompido
+  ✅ [PASS] parseCSV responde lista vazia para texto em branco
+  ✅ [PASS] parseReceiptText responde 0 centavos para texto sem valor fiscal
+
+📦 14. IA Razão, Simulador What-If & Detecção de Anomalias — 8 Testes
+  ✅ [PASS] buildFinancialContext calcula Saldo Realizado com exatidão (500000 - 150000 = 350000)
+  ✅ [PASS] queryAIAdvisor aprova compra compatível com o Saldo Disponível
+  ✅ [PASS] queryAIAdvisor rejeita compra que excede o Saldo Disponível
+  ✅ [PASS] queryAIAdvisor responde dúvidas de saldo com valores numéricos reais
+  ✅ [PASS] simulateScenarios projeta os 3 cenários econômica para os meses solicitados
+  ✅ [PASS] simulateScenarios garante a ordem matemática: Otimista >= Esperado >= Conservador
+  ✅ [PASS] detectAnomalies identifica cobrança duplicada com mesma descrição e valor em até 3 dias
+  ✅ [PASS] detectAnomalies responde sem erros para histórico limpo
+
+📦 15. APIs de Backend Serverless (Node.js / TypeScript) — 8 Testes
+  ✅ [PASS] UserAuthService informa que autenticação de produção não está configurada
+  ✅ [PASS] UserAuthService falha fechado com mensagem explícita de configuração ausente
+  ✅ [PASS] UserAuthService não emite sessão fictícia
+  ✅ [PASS] BankingService gera sessão válida de conexão bancária Open Finance
+  ✅ [PASS] BankingService converte extrato bancário do webhook para centavos inteiros
+  ✅ [PASS] OcrService executa pipeline visual/textual e extrai centavos inteiros no backend
+  ✅ [PASS] OutboxSyncService sincroniza lote e aplica resolução de conflitos LWW no backend
+
+📦 16. Persistência Local-first e desativação segura da criptografia legada — 6 Testes
+  ✅ [PASS] saveState e loadState persistem e recuperam estado local
+saveStateEncrypted foi desativado: a implementação legada não era segura.
+  ✅ [PASS] criptografia legada insegura falha de forma fechada
+loadStateEncrypted foi desativado: não é possível confiar na proteção legada.
+  ✅ [PASS] criptografia legada não é tratada como armazenamento seguro
+
+==================================================
+   O RAZÃO FASE 5 — TESTES DE SINCRONIZAÇÃO OUTBOX   
+==================================================
+
+  ✅ [PASS] Deve gerar identificador de evento válido para o Outbox
+  ✅ [PASS] Deve salvar a operação na fila local IndexedDB/LocalStorage
+  ✅ [PASS] Deve reter itens na fila quando o dispositivo estiver offline
+  ✅ [PASS] Deve informar sincronização não configurada sem simular sucesso
+  ✅ [PASS] Deve preservar a fila quando não há servidor conectado
+  ✅ [PASS] Deve sincronizar e esvaziar a fila quando online
+  ✅ [PASS] Deve aplicar Last-Write-Wins corretamente no conflito
+  ✅ [PASS] Deve manter operação que atingiu o limite de tentativas para revisão
+  ✅ [PASS] Não deve reenviar automaticamente operação marcada como falha definitiva
+  ✅ [PASS] Deve rejeitar registro de mutação quando a persistência local falha
+
+RESULTADO DA FASE 5: 10 aprovados, 0 falhas
+
+  ✅ [PASS] Fila de sincronização Outbox passa em todos os cenários de conectividade offline/online
+  ✅ [PASS] Sincronização imediata de gravações do usuário
+  ✅ [PASS] loadState lida com limpezas de armazenamento de forma segura
+
+=================================================================
+   RESULTADO DOS TESTES DE DOMÍNIO: 101 APROVADOS, 0 FALHAS
+=================================================================
+
+🎉 SUÍTE LOCAL APROVADA: as verificações de domínio passaram; isso não substitui testes E2E de interface, segurança ou serviços reais.
+Desktop security checks: 19 passed, 0 failed
+Desktop trust boundary: 19 checks passed, 0 failed
+Persistence checks: 13 passed, 0 failed
+State validation: 24 assertions passed, 0 failed
+Livro-razão: 13 verificações aprovadas.
+Diagnóstico de integridade: 6 verificações aprovadas.
+Resumo do painel: 20 verificações aprovadas.
+Pagamento de fatura: 20 verificações aprovadas.
+Reconciliação segura: 29 verificações aprovadas.
+Integração da conciliação de saldos: 5 verificações aprovadas.
+Correções de divergência: 27 verificações aprovadas.
+Integração visual da correção de saldo: 9 verificações aprovadas.
+Audit log tests: 17 assertions passed, 0 failed
+Audit integrity tests: 15 passed, 0 failed
+Audit integration tests: 21 checks passed, 0 failed
+✓ Backup válido é criado, verificado e restaurado
+✓ Backup com conteúdo alterado é rejeitado
+✓ JSON truncado é rejeitado
+✓ Arquivo vazio é rejeitado
+✓ Formato desconhecido é rejeitado
+✓ IDs duplicados são rejeitados
+✓ Backup sem estrutura obrigatória é rejeitado
+Backup tests: 13 passed, 0 failed
+✓ Datas impossíveis são rejeitadas mesmo com checksum recalculado
+✓ Referências a contas inexistentes são rejeitadas
+✓ Pagamento de fatura com cartão virtual é preservado
+Backup integration checks: 10 passed, 0 failed
+✓ Estado anterior é salvo em snapshot antes de aplicar a restauração
+✓ Falha na gravação preserva e recupera o estado anterior
+✓ Se não for possível criar backup prévio, restauração aborta sem tocar nos dados
+✓ Escrita de estado falha de modo seguro sem alterar o valor original
+✓ Desktop sem API transacional falha fechado, sem fallback para localStorage
+✓ Persistência desktop exige confirmação explícita de sucesso
+✓ Resultado transacional nativo é propagado à interface
+✓ Leitura recupera snapshot anterior quando o estado ativo está corrompido
+✓ Estado corrompido sem snapshot gera erro e falha fechado
+✓ Gravação desktop em andamento termina antes de iniciar a restauração
+Restore recovery tests: 10 scenarios passed, 0 failed
+Restore recovery integration checks: 13 passed, 0 failed
+Backup history tests: 15 assertions passed, 0 failed
+Backup history integration checks: 20 passed, 0 failed
+Category-learning integrity: 9 assertions passed, 0 failed
+Category learning platform privacy: 10 assertions passed, 0 failed
+Historical backup validation: 10 assertions passed, 0 failed
+Historical backup export: 8 assertions passed, 0 failed
+Historical backup export integration: 10 checks passed, 0 failed
+Transaction search/export tests: 17 assertions passed, 0 failed
+Transaction search/export UI integration: 10 assertions passed, 0 failed
+Recurring rule tests: 12 passed, 0 failed
+Recurring integration tests: 10 passed, 0 failed
+Recurring generation tests: 15 passed, 0 failed
+Recurring generation integration tests: 10 passed, 0 failed
+Open Finance demo safety: 4 checks passed
+Open Finance demo keyboard control: 1 assertion passed
+ErrorBoundary recovery checks: 8 passed, 0 failed
+Profile isolation disclosure checks: 7 passed, 0 failed
+Profile isolation migration: 40 assertions passed, 0 failed
+Budget/profile isolation and anomaly detector: 13 static assertions passed, 0 failed
+==================================================
+   O RAZÃO FASE 7 — TESTES DE IA & CENÁRIOS WHAT-IF   
+==================================================
+
+  ✅ [PASS] buildFinancialContext inclui saldo inicial e movimentos pagos até a data de referência
+  ✅ [PASS] queryAIAdvisor autorizou compra dentro do saldo disponível
+  ✅ [PASS] simulateScenarios gerou projeções para N+1 meses
+  ✅ [PASS] Cenário otimista é maior ou igual ao conservador
+  ✅ [PASS] simulateScenarios usa o saldo real do livro-razão, incluindo saldo inicial
+  ✅ [PASS] simulateScenarios não soma novamente lançamentos já pagos no mês corrente
+  ✅ [PASS] detectAnomalies identificou cobrança duplicada com sucesso
+  ✅ [PASS] detectAnomalies identificou estouro de orçamento para a categoria
+  ✅ [PASS] detectAnomalies lê orçamento PJ com chave escopada
+  ✅ [PASS] detectAnomalies não expõe categorias/orçamentos PF no perfil PJ
+  ✅ [PASS] detectAnomalies mantém o orçamento PF isolado do orçamento PJ
+
+--------------------------------------------------
+RESULTADO DA FASE 7: 11 aprovados, 0 falhas
+--------------------------------------------------
+
+AI/profile isolation integration: 3 checks passed, 0 failed
+Financial position / forecast: 12 assertions passed, 0 failed
+✓ 10 verificações: autenticação não configurada falha fechado e não emite hashes/tokens fictícios.
+✓ 7 verificações: splash sem alegações falsas de criptografia e aviso explícito para armazenamento Web.
+✓ Payload incompleto é rejeitado antes de substituir o estado confirmado
+✓ Falha no snapshot secundário não mascara a gravação e a corrupção recupera o último estado confirmado
+✓ Arquivo principal ausente recupera o último estado confirmado em vez de iniciar vazio
+✓ Uma restauração bem-sucedida atualiza o snapshot recente sem perder a cópia pré-restauração
+✓ Gerenciador lista e carrega a cópia recente e mantém validação do identificador de arquivo
+✓ Desktop rejeita restauração inválida e recupera estado semanticamente corrompido antes de o retornar
+Desktop last-known-good tests: 5 scenarios passed, 0 failed
+✓ Estado Web corrompido recupera e regrava o último estado confirmado
+✓ Falha ao atualizar snapshot preserva o último snapshot válido sem falso sucesso de recuperação
+✓ Cópia pré-restauração é usada apenas como segunda alternativa
+✓ Falha de todas as cópias é explícita e não vira estado vazio
+✓ Estado JSON válido mas financeiramente inválido recupera a cópia confirmada antes da sanitização
+✓ Limpeza explícita não ressuscita dados pelo snapshot
+Web last-known-good checks: 5 scenarios passed, 0 failed
+✓ Restauração atualiza last-known-good e não volta ao estado pré-restauração
+✓ RazaoLocalDatabase compartilha a camada de persistência e recuperação
+✓ Erros de leitura do adaptador não são convertidos em banco vazio
+✓ Falha de snapshot após restauração é reportada sem falsificar sucesso secundário
+Web restore snapshot consistency: 4 scenarios passed, 0 failed
+✓ Corrupção da outbox falha de forma explícita sem sobrescrever dados
+✓ Estrutura inválida da outbox não é tratada como fila vazia
+✓ Enfileiramento normal é persistido e confirmado por leitura
+✓ Gravação recusa payloads de fila com formato inválido
+Startup recovery flow: 13 static regression checks passed, 0 failed
+Contratos estáticos de segurança/runtime: 23 verificações aprovadas, 0 falhas.
+==========================================
+   O RAZÃO V3 - SUÍTE COMPLETA DE TESTES  
+==========================================
+
+✅ [PASS] Money Domain
+✅ [PASS] Accounts Domain
+✅ [PASS] Invoices Domain
+✅ [PASS] Commitments Domain
+✅ [PASS] Sanitize Domain
+✅ [PASS] UID Domain
+✅ [PASS] Budget Domain
+✅ [PASS] Savings Domain
+✅ [PASS] Migrations Domain
+✅ [PASS] Forecast Domain
+
+------------------------------------------
+RESULTADO FINAL: 10 aprovados, 0 falhas
+------------------------------------------
+
