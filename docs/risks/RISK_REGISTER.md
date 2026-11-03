@@ -109,6 +109,7 @@ Estados: `ABERTO` · `CONFIRMADO NA UI` (reproduzido na validação visual) · `
 | V-18 | Dois botões "Novo lançamento" na tela Lançamentos | CONFIRMADO NA UI |
 | V-19 | README aponta `127.0.0.1:3000`; servidor responde em `localhost` | CONFIRMADO |
 | V-20 | Seletor de arquivo nativo sem estilo na recuperação | CONFIRMADO NA UI |
+| EST-09 | `AppShell.jsx:3` importa o `package.json` inteiro só para exibir a versão: scripts, dependências e configuração de build vão para o bundle do cliente (sem segredos; exposição desnecessária e bundle maior). Achado durante a 21.1 | ABERTO — fora do escopo da beta.21; propor importação só da versão em incremento futuro |
 | FIN-11, DEP-01, EST-07 | Journal de partidas dobradas, política de dependências, raiz poluída | ABERTO |
 | Backend, sync, LLM, OCR visual, Open Finance, PJ avançado | gates próprios (Plano §91) | PLANEJADO |
 
@@ -134,3 +135,4 @@ Estados: `ABERTO` · `CONFIRMADO NA UI` (reproduzido na validação visual) · `
 | 02/11/2026 | Criação a partir do Relatório da Fase 0 (Incremento 0.1) |
 | 02/11/2026 | Validação visual: FIN-05, FIN-08, DATA-02 → P0 (D-002); AI-01 P1 (D-003); V-xx incorporados (D-004); DATA-05 confirmado por teste dedicado; SEC-09 verificado sem defeito; REQ-INV-PAY-001 registrado (D-005) |
 | 02/11/2026 | DATA-05 → **P0** (D-009), com ficha (perda de acesso × perda física), contenção e critérios de aceite obrigatórios na Alpha 1; PROC-04 decidido: evidências no Git normal (D-010) |
+| 03/11/2026 | 21.1 concluída (commit `4549207`, CI verde em 4 combinações): SEC-01 tratado no repositório (residuais removidos + teste de contrato); EST-05/EST-06 tratados (3 testes de domínio no runner; CI). Novo achado EST-09 (P3) registrado. Status final de SEC-01/EST-05/EST-06 será atualizado no fechamento da beta.21 |
