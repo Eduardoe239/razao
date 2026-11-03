@@ -1,0 +1,12 @@
+CSV "-45.90" (ponto decimal)                     459000
+CSV "-45,90"                                     4590
+CSV "-1.234.567,89"                              123457
+CSV "1.234,56"                                   123456
+CSV +100,00 "Estorno de compra" -> type          "despesa"
+CSV desc com apóstrofo                           [["Padaria",500]]
+CSV importedId estável entre importações?        false
+CSV data 31/02/2026 ->                           "2026-02-31"
+OFX TRNAMT "-1.234,56" ->                        123
+OFX sem FITID estável?                           "ofx-0-1793666757593"
+parseToCents("abc") (legado) ->                  0
+parseToCents("1.234") ->                         123

@@ -1,0 +1,75 @@
+{
+ "navButtons": [
+  "PF\nFinanças pessoais\nPessoa física",
+  "Visão geral",
+  "Lançamentos",
+  "Cartões e faturas",
+  "Orçamentos",
+  "Relatórios",
+  "Importar dados",
+  "Planejamento",
+  "Perfil",
+  "Preferências",
+  "Histórico de Auditoria",
+  "Integridade Financeira",
+  "Diagnóstico e saúde",
+  "Fechar menu",
+  "Visão geral",
+  "Lançamentos",
+  "Cartões e faturas",
+  "Orçamentos",
+  "Relatórios",
+  "Importar dados",
+  "Planejamento",
+  "Perfil",
+  "Preferências",
+  "Histórico de Auditoria",
+  "Integridade Financeira",
+  "Diagnóstico e saúde",
+  "Início",
+  "Movimentos",
+  "Cartões",
+  "Orçamento",
+  "Mais"
+ ],
+ "hasCreateAccountUI": 0,
+ "hasCreateCardUI": 0,
+ "modalSelects": [
+  [
+   "📝 Alimentação",
+   "📝 Moradia",
+   "📝 Transporte",
+   "📝 Salário",
+   "📝 Outras receitas"
+  ],
+  [
+   "Minha conta principal"
+  ],
+  [
+   "Pago / Liquidado",
+   "⏳ Pendente"
+  ]
+ ],
+ "modalTypeButtons": [
+  "✕",
+  "↑ Saída (Despesa)",
+  "↓ Entrada (Receita)",
+  "SALVAR LANÇAMENTO"
+ ],
+ "lsKeysAfterSave": [
+  "razao_app_state_v3",
+  "razao_app_state_v3.last-known-good"
+ ],
+ "txCountStored": 1,
+ "storedPlaintextContainsDescription": true,
+ "txCountAfterReload": 1,
+ "feedShowsTx": 1,
+ "pjButtonFound": 1,
+ "feedShowsTxInPJ": 0,
+ "hScrollMobile": false,
+ "recoveryScreenText": "!\nRECUPERAÇÃO SEGURA\nOs dados precisam ser recuperados\n\nO Razão não conseguiu confirmar a leitura do armazenamento principal. Por segurança, a gravação automática foi bloqueada e nenhum estado vazio será salvo por cima dos dados existentes.\n\nDetalhes técnicos do erro\nTentar ler novamente\nRecuperar u",
+ "corruptedBytesPreserved": "{corrompido",
+ "errors": [
+  "console: Não foi possível carregar os dados persistidos do Razão: Error: Falha ao carregar o estado local e recuperar cópias: Expected property name or '}' in JSON at position 1 (line 1 column 2). Cópia de recuperação ausente. | Cópia de recuperação ausente.\n    at Ar (http://127.0.0.1:4173/assets/index-w3i24aW9.js:11:143384)\n    at jr (http://127.0.0.1:4173/assets/index-w3i24aW9.js:11:143787)\n    at http://127.0.0.1:4173/assets/index-w3i24aW9.js:11:150139\n    at http://127.0.0.1:4173/assets/index-w3i24aW9.js:11:151823\n    at Sl (http://127.0.0.1:4173/assets/index-w3i24aW9.js:8:95041)\n    at Vu (http://127.0.0.1:4173/assets/index-w3i24aW9.js:8:118230)\n    at Bu (http://127.0.0.1:4173/assets/index-w3i24aW9.js:8:118003)\n    at Vu (http://127.0.0.1:4173/assets/index-w3i24aW9.js:8:118251)\n    at Bu (http://127.0.0.1:4173/assets/index-w3i24aW9.js:8:118003)\n    at Vu (http://127.0.0.1:4173/assets/index-w3i24aW9.js:8:119446)"
+ ]
+}
