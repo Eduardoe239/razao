@@ -50,7 +50,7 @@ npm test
 npm run dev
 ```
 
-Abra o endereço local informado pelo Vite: `http://127.0.0.1:3000`. No modo Electron de desenvolvimento, o renderer usa `http://127.0.0.1:5173` e o processo principal armazena seus dados em `.razao-desktop-test-profile/RazaoData`, um perfil isolado que não utiliza os dados do aplicativo instalado. Mantenha o terminal aberto enquanto testa. Use somente dados fictícios durante a validação. Os logs de `npm test` da beta.20 estão em [`docs/audit/fase0/evidencias/`](./docs/audit/fase0/evidencias/) (`npm-test-notebook-windows.log` e `npm-test.log`); `evidence/` guarda o histórico da beta.18.
+Abra o endereço local informado pelo Vite (normalmente `http://localhost:3000`; em alguns sistemas o servidor responde apenas em `localhost`/IPv6 e não em `127.0.0.1`). No modo Electron de desenvolvimento, o renderer usa `http://127.0.0.1:5173` e o processo principal armazena seus dados em `.razao-desktop-test-profile/RazaoData`, um perfil isolado que não utiliza os dados do aplicativo instalado. Mantenha o terminal aberto enquanto testa. Use somente dados fictícios durante a validação. Os logs de `npm test` da beta.20 estão em [`docs/audit/fase0/evidencias/`](./docs/audit/fase0/evidencias/) (`npm-test-notebook-windows.log` e `npm-test.log`); `evidence/` guarda o histórico da beta.18.
 
 O comando de testes atual é automatizado e combina testes de domínio, validação de payload, persistência simulada, migração, backup/restore e verificações estáticas. Parte dos scripts é apenas estática (verifica o código-fonte, não o comportamento) e três testes de domínio ainda não fazem parte do runner; ver o relatório da Fase 0, §10–§11.
 

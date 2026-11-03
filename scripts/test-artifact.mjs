@@ -9,6 +9,7 @@ import { runBudgetTests } from "../src/domain/budget.test.js";
 import { runSavingsTests } from "../src/domain/savings.test.js";
 import { runMigrationsTests } from "../src/domain/migrations.test.js";
 import { runForecastTests } from "../src/domain/forecast.test.js";
+import { testAchievementsDomain } from "../src/domain/achievements.test.js";
 
 const suites = [
   { name: "Money Domain", fn: runMoneyTests },
@@ -20,7 +21,8 @@ const suites = [
   { name: "Budget Domain", fn: runBudgetTests },
   { name: "Savings Domain", fn: runSavingsTests },
   { name: "Migrations Domain", fn: runMigrationsTests },
-  { name: "Forecast Domain", fn: runForecastTests }
+  { name: "Forecast Domain", fn: runForecastTests },
+  { name: "Achievements Domain", fn: testAchievementsDomain }
 ];
 
 let totalPassed = 0;
