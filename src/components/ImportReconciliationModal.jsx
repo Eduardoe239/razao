@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { parseOFX, parseCSV } from '../domain/importers';
+import { parseOFXDetailed, parseCSVDetailed, toLegacyImportRow } from '../domain/importers';
 import { parseReceiptText } from '../domain/receiptOcr';
 import { reconcileTransactions } from '../domain/reconciliation';
 import { uid } from '../domain/uid';
@@ -32,6 +32,9 @@ export function ImportReconciliationModal({
   const [selectedAccountId, setSelectedAccountId] = useState(accounts[0]?.id || 'acc-1');
   const [parsedItems, setParsedItems] = useState([]);
   const [step, setStep] = useState('input'); // input -> review
+  // Resultado detalhado do parser CSV/OFX: registros válidos, rejeitados e avisos.
+  const [importReport, setImportReport] = useState(null);
+  const [inputError, setInputError] = useState('');
 
   useEffect(() => {
     if (accounts.some(account => account?.id === selectedAccountId)) return;
@@ -82,10 +85,20 @@ export function ImportReconciliationModal({
 
   const handleProcessManual = () => {
     let extracted = [];
-    if (importType === 'ofx') {
-      extracted = parseOFX(rawText);
-    } else if (importType === 'csv') {
-      extracted = parseCSV(rawText);
+    let report = null;
+    setInputError('');
+    if (importType === 'ofx' || importType === 'csv') {
+      const detailed = importType === 'ofx' ? parseOFXDetailed(rawText) : parseCSVDetailed(rawText);
+      if (detailed.fatal) {
+        setInputError(detailed.fatal.message);
+        return;
+      }
+      extracted = detailed.rows.map(toLegacyImportRow);
+      report = { stats: detailed.stats, rejected: detailed.rejected, warnings: detailed.warnings };
+      if (extracted.length === 0 && detailed.rejected.length === 0) {
+        setInputError(detailed.warnings[0]?.message || 'Nenhum lançamento foi identificado no conteúdo fornecido.');
+        return;
+      }
     } else if (importType === 'ocr') {
       const single = parseReceiptText(rawText);
       if (single && single.amountCents > 0) {
@@ -93,14 +106,15 @@ export function ImportReconciliationModal({
       }
     }
 
-    if (extracted.length === 0) {
-      alert('Nenhum lançamento válido foi identificado no conteúdo fornecido.');
+    if (extracted.length === 0 && !report) {
+      setInputError('Nenhum lançamento válido foi identificado no conteúdo fornecido.');
       return;
     }
 
     const importedWithSource = extracted.map(item => ({ ...item, source: importType }));
     const reconciled = reconcileTransactions(importedWithSource, existingTransactions, { accountId: selectedAccountId, profileType });
     setParsedItems(reconciled.map(item => ({ ...item, selected: item.reconciliationStatus === 'unique' || item.reconciliationStatus === 'match_pending' })));
+    setImportReport(report);
     setStep('review');
   };
 
@@ -120,6 +134,7 @@ export function ImportReconciliationModal({
     setStep('input');
     setRawText('');
     setParsedItems([]);
+    setImportReport(null);
     onClose();
   };
 
@@ -143,16 +158,16 @@ export function ImportReconciliationModal({
           <div>
             {/* Seleção do Tipo de Conexão */}
             <div className="pill-tabs-container" style={{ marginBottom: '16px' }}>
-              <button className={`pill-tab ${importType === 'open_finance' ? 'active' : ''}`} onClick={() => setImportType('open_finance')}>
+              <button className={`pill-tab ${importType === 'open_finance' ? 'active' : ''}`} onClick={() => { setImportType('open_finance'); setInputError(''); }}>
                 🧪 Demonstração bancária
               </button>
-              <button className={`pill-tab ${importType === 'ofx' ? 'active' : ''}`} onClick={() => setImportType('ofx')}>
+              <button className={`pill-tab ${importType === 'ofx' ? 'active' : ''}`} onClick={() => { setImportType('ofx'); setInputError(''); }}>
                 📄 Extrato .OFX
               </button>
-              <button className={`pill-tab ${importType === 'csv' ? 'active' : ''}`} onClick={() => setImportType('csv')}>
+              <button className={`pill-tab ${importType === 'csv' ? 'active' : ''}`} onClick={() => { setImportType('csv'); setInputError(''); }}>
                 Planilha .CSV
               </button>
-              <button className={`pill-tab ${importType === 'ocr' ? 'active' : ''}`} onClick={() => setImportType('ocr')}>
+              <button className={`pill-tab ${importType === 'ocr' ? 'active' : ''}`} onClick={() => { setImportType('ocr'); setInputError(''); }}>
                 🧾 Comprovante Pix
               </button>
             </div>
@@ -260,10 +275,16 @@ export function ImportReconciliationModal({
                         : 'Cole o texto do comprovante de pagamento Pix ou nota fiscal...'
                     }
                     value={rawText}
-                    onChange={(e) => setRawText(e.target.value)}
+                    onChange={(e) => { setRawText(e.target.value); setInputError(''); }}
                     style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}
                   />
                 </div>
+
+                {inputError && (
+                  <div role="alert" style={{ padding: '10px 12px', marginBottom: '12px', borderRadius: 'var(--radius-md)', background: 'var(--color-expense-bg)', border: '1px solid var(--color-expense-border)', color: 'var(--color-expense)', fontSize: '12px', fontWeight: 600 }}>
+                    {inputError}
+                  </div>
+                )}
 
                 <button className="btn-primary" onClick={handleProcessManual} disabled={!rawText.trim()}>
                   Analisar & Reconciliar Lançamentos
@@ -274,18 +295,32 @@ export function ImportReconciliationModal({
         ) : (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-              <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>
-                {parsedItems.length} Lançamento(s) Encontrado(s)
+              <span role="status" style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                {importReport
+                  ? `${importReport.stats.valid} de ${importReport.stats.dataRecords} registro(s) válido(s)${importReport.stats.rejected > 0 ? ` · ${importReport.stats.rejected} rejeitado(s)` : ''}`
+                  : `${parsedItems.length} Lançamento(s) Encontrado(s)`}
               </span>
               <button
-                onClick={() => setStep('input')}
+                onClick={() => { setStep('input'); setImportReport(null); }}
                 style={{ background: 'none', border: 'none', color: 'var(--brand-accent)', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
               >
                 ← Voltar
               </button>
             </div>
 
+            {importReport?.warnings?.length > 0 && (
+              <div role="status" aria-label="Avisos sobre o arquivo" style={{ padding: '10px 12px', marginBottom: '12px', borderRadius: 'var(--radius-md)', background: 'var(--color-pending-bg)', border: '1px solid var(--color-pending-border)' }}>
+                <strong style={{ display: 'block', fontSize: '12px', color: 'var(--color-pending)', marginBottom: '4px' }}>Atenção antes de importar</strong>
+                <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '11px', lineHeight: 1.5, color: 'var(--text-secondary)' }}>
+                  {importReport.warnings.map((warning, index) => <li key={`${warning.code}-${index}`}>{warning.message}</li>)}
+                </ul>
+              </div>
+            )}
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '360px', overflowY: 'auto', marginBottom: '20px' }}>
+              {parsedItems.length === 0 && (
+                <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>Nenhum registro válido para importar. Confira os motivos abaixo.</p>
+              )}
               {parsedItems.map((item, idx) => {
                 const isDup = item.reconciliationStatus === 'duplicate';
                 const isPending = item.reconciliationStatus === 'match_pending';
@@ -316,8 +351,8 @@ export function ImportReconciliationModal({
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>{item.description}</span>
-                        <span className="font-mono-tabular" style={{ fontSize: '13px', fontWeight: '800', color: item.type === 'despesa' ? 'var(--color-expense)' : 'var(--color-income)' }}>
-                          {formatCurrency(item.amountCents)}
+                        <span className="font-mono-tabular" style={{ fontSize: '13px', fontWeight: '800', color: item.type === 'despesa' ? 'var(--color-expense)' : 'var(--color-income)', whiteSpace: 'nowrap' }}>
+                          {item.type === 'despesa' ? 'Saída −' : 'Entrada +'} {formatCurrency(item.amountCents)}
                         </span>
                       </div>
 
@@ -341,7 +376,26 @@ export function ImportReconciliationModal({
               })}
             </div>
 
-            <button className="btn-primary" onClick={handleConfirmImport}>
+            {importReport?.rejected?.length > 0 && (
+              <section aria-label="Registros rejeitados" style={{ marginBottom: '16px' }}>
+                <h4 style={{ margin: '0 0 6px', fontSize: '12px', fontWeight: 800, color: 'var(--color-expense)' }}>
+                  {importReport.rejected.length} registro(s) rejeitado(s) — não serão importados
+                </h4>
+                <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflowY: 'auto' }}>
+                  {importReport.rejected.map((item, idx) => (
+                    <li key={`${item.line}-${idx}`} style={{ padding: '8px 10px', borderRadius: 'var(--radius-md)', background: 'var(--color-expense-bg)', border: '1px solid var(--color-expense-border)', fontSize: '11px', lineHeight: 1.4 }}>
+                      <strong style={{ color: 'var(--text-primary)' }}>
+                        {item.endLine > item.line ? `Linhas ${item.line}–${item.endLine}` : `Linha ${item.line}`}:
+                      </strong>{' '}
+                      <span style={{ color: 'var(--text-secondary)' }}>{item.reason}</span>
+                      <code style={{ display: 'block', marginTop: '4px', fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--text-muted)', overflowWrap: 'anywhere' }}>{item.excerpt}</code>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            <button className="btn-primary" onClick={handleConfirmImport} disabled={parsedItems.length === 0}>
               Confirmar {parsedItems.filter(i => i.selected).length} decisão(ões) de conciliação
             </button>
           </div>

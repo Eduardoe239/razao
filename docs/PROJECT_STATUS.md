@@ -1,6 +1,6 @@
 # O Razão — Estado do projeto
 
-**Atualizado em:** 02/11/2026 (decisões D-001…D-018 — Fase 0 encerrada; Alpha 1 em andamento) · **Norma:** `PLANO_MESTRE_O_RAZAO_V2.0.md` (raiz; cópia arquivada em `docs/plano-mestre-v2.0/`)
+**Atualizado em:** 03/11/2026 (21.2 implementada) · 02/11/2026 (decisões D-001…D-018 — Fase 0 encerrada; Alpha 1 em andamento) · **Norma:** `PLANO_MESTRE_O_RAZAO_V2.0.md` (raiz; cópia arquivada em `docs/plano-mestre-v2.0/`)
 
 > Este arquivo registra fatos verificados e pendências. Propostas não são decisões: tudo marcado `PROPOSED` aguarda aprovação do proprietário.
 
@@ -53,7 +53,7 @@ O encerramento da Fase 0 **não** declara o produto pronto, não resolve nenhum 
 
 | Item | Situação |
 |---|---|
-| Estado | **EM ANDAMENTO.** beta.21 aprovada (D-013); subincremento **21.1 em execução**; 21.2 e 21.3 aguardam autorização entre subincrementos |
+| Estado | **EM ANDAMENTO.** beta.21 aprovada (D-013); **21.1 DONE** (aprovada pelo proprietário); **21.2 implementada, aguardando aprovação**; 21.3 aguarda autorização. Versão continua `1.22.0-beta.20` |
 | Primeiro passo obrigatório | Plano técnico do primeiro incremento (Plano C.2.8, Definition of Ready §81) apresentado ao proprietário antes de qualquer implementação |
 | Sequência de incrementos (D-017, planejamento inicial; cada um com plano e aprovação próprios) | **beta.21** higiene, CI e importação correta (FIN-01/02/03/04, SEC-01, EST-05/06) · **beta.22** datas civis e saldo (FIN-05, FIN-08, AI-01, V-02/V-17) · **beta.23** persistência e recuperação seguras (P0-5, **DATA-05 — 6 critérios**, DATA-02, FIN-09) · **beta.24** contratos e modelo (ADR-001/002/003 para decisão do proprietário, modelo com workspace e moeda, FIN-06, repositórios/casos de uso, matriz de papéis) · **beta.25** protótipo de armazenamento (IndexedDB/Desktop, medições 2k/10k/50k) · **beta.26** workspaces e migração (User/Workspace/Membership, migração com dry-run/backup/rollback, isolamento §64.12, FUN-07, SEC-05) · **beta.27** candidata da Alpha 1 (gate §69 + S1–S6/D-011); beta.28 de correções se a avaliação exigir. Recuperação segura (beta.23) **antes** da migração (beta.26) |
 | Cartões (D-018) | Funcionalidades operacionais de cartões e faturas **ocultas durante a Alpha 1**, indisponíveis até a Alpha 3; nenhum cartão fictício apresentado como real. Tarefa de interface ainda **não programada** — será incluída no plano de um incremento da Alpha 1 |
@@ -69,13 +69,13 @@ Classificação completa em `docs/audit/fase0/RELATORIO_AUDITORIA_FASE0.md` §4 
 
 | Situação | Capacidades |
 |---|---|
-| Defeituosa / não confiável | Importação CSV/OFX (FIN-01..04), contas (sem UI), cartões/faturas (inalcançáveis pela UI), **saldo do painel** (FIN-05/FIN-08, P0), **recuperação de dados** (DATA-02 P0, DATA-05 P0) |
+| Defeituosa / não confiável | Importação CSV/OFX (FIN-02 aberto até a 21.3; FIN-01/03/04 corrigidos na 21.2, aguardando aprovação; IMP-01), contas (sem UI), cartões/faturas (inalcançáveis pela UI), **saldo do painel** (FIN-05/FIN-08, P0), **recuperação de dados** (DATA-02 P0, DATA-05 P0) |
 | Implementada sem E2E, validada visualmente em 02/11 | Lançamentos (receita/despesa), busca e exportação CSV (fórmulas neutralizadas), orçamentos (sem "restante"), recorrências, relatórios, perfil, preferências, histórico, integridade, restauração de backup, responsividade 375–1440 |
 | Demonstrativa / mock | Open Finance, OCR, sincronização, backend |
 | Inexistente (fail-closed) | Cadastro/autenticação, Workspace/Membership |
 | Protótipo | Assistente (regras locais, sem LLM; mensagem enganosa com saldo negativo — AI-01), previsões (multiplicadores fixos) |
 
-**Avisos operacionais:** não usar a importação CSV/OFX com extratos reais até a correção prevista (beta.21). Lançamentos feitos após 21h (horário de Brasília) recebem a data do dia seguinte e não entram no "Saldo disponível" até a meia-noite (FIN-05). Diante da tela "O Razão encontrou um problema", usar **"Recarregar aplicação"**; **não** usar "Tentar recuperação local" sem exportar backup antes (DATA-05, P0). Se já tiver sido usada, não executar nova restauração nem limpar dados do site: os dados podem estar preservados na cópia interna, recuperável apenas por intervenção técnica.
+**Avisos operacionais:** não usar a importação CSV/OFX com extratos reais até o fechamento da beta.21 (a 21.2 corrige valores e linhas; o identificador determinístico, FIN-02, é a 21.3). Lançamentos feitos após 21h (horário de Brasília) recebem a data do dia seguinte e não entram no "Saldo disponível" até a meia-noite (FIN-05). Diante da tela "O Razão encontrou um problema", usar **"Recarregar aplicação"**; **não** usar "Tentar recuperação local" sem exportar backup antes (DATA-05, P0). Se já tiver sido usada, não executar nova restauração nem limpar dados do site: os dados podem estar preservados na cópia interna, recuperável apenas por intervenção técnica.
 
 ## 4. Próximos passos (sequência proposta, ver Plano §67–69)
 
@@ -131,3 +131,5 @@ Incrementos intermediários (ex.: beta.21, beta.22) não encerram Alphas; a aval
 | 02/11/2026 | Validação visual/funcional da beta.20 + testes dedicados (não commitado) | Checklist completo; 159 capturas; D-001…D-008 registradas |
 | 02/11/2026 | Atualização documental final da Fase 0 (não commitada) | DATA-05 → P0 e Alpha 1 (D-009); evidências no Git normal (D-010); governança das Alphas (D-011) |
 | 02/11/2026 | **Encerramento da Fase 0** (não commitado) | Aprovação formal do proprietário (D-012); Alpha 1 autorizada, não iniciada |
+| 03/11/2026 | beta.21 / 21.1 — residuais Electron, runner e CI (`4549207`, doc. `eeac50d`) | DONE, aprovada pelo proprietário; CI verde em 4 combinações |
+| 03/11/2026 | beta.21 / 21.2 — valores e linhas CSV/OFX | Implementada; testes, build e E2E locais verdes (`docs/audit/beta21/evidencias/21.2/`); aguarda aprovação. Achados IMP-01 (P1) e UX-02 (P2) |

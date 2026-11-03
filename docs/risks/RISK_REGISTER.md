@@ -1,6 +1,6 @@
 # O Razão — Registro de riscos
 
-**Atualizado em:** 02/11/2026 (decisões D-002 a D-004 do proprietário) · **Base:** beta.20 (`f011bcf`) · **Plano:** §88 (prioridade), §89 (riscos)
+**Atualizado em:** 03/11/2026 (21.2) · 02/11/2026 (decisões D-002 a D-004 do proprietário) · **Base:** beta.20 (`f011bcf`) · **Plano:** §88 (prioridade), §89 (riscos)
 **Fontes:** `docs/audit/fase0/RELATORIO_AUDITORIA_FASE0.md` (IDs FIN/FUN/DATA/SEC/EST/QA) e `docs/audit/fase0/RELATORIO_VALIDACAO_VISUAL_BETA20.md` (IDs V-xx). Prioridades marcadas **(D-00x)** foram decididas pelo proprietário; as demais são propostas técnicas. "Incremento" é alocação **proposta**; nenhum item está resolvido por correção.
 
 Estados: `ABERTO` · `CONFIRMADO NA UI` (reproduzido na validação visual) · `MITIGADO` (contenção sem correção) · `VERIFICADO SEM DEFEITO` · `RESOLVIDO` (com evidência) · `ACEITO` (pelo proprietário).
@@ -9,9 +9,9 @@ Estados: `ABERTO` · `CONFIRMADO NA UI` (reproduzido na validação visual) · `
 
 | ID | Risco | Impacto em dados/dinheiro | Evidência | Incremento proposto | Depende de | Estado |
 |---|---|---|---|---|---|---|
-| FIN-01 | Parser CSV/OFX corrompe valores (ponto decimal, milhar múltiplo) | valor importado errado até 100× | `evidencias/probe-import-resultado.txt`; `visual/08-importacao/revisao-duplicatas.png` (−4.50 → R$ 450,00) | beta.21 (21.2) | gate Fase 0 | CONFIRMADO NA UI — contenção: não importar extratos reais |
+| FIN-01 | Parser CSV/OFX corrompe valores (ponto decimal, milhar múltiplo) | valor importado errado até 100× | `evidencias/probe-import-resultado.txt`; `visual/08-importacao/revisao-duplicatas.png` (−4.50 → R$ 450,00) | beta.21 (21.2) | gate Fase 0 | **CORRIGIDO NA 21.2, aguardando aprovação** (`parseStatementAmount`; `docs/audit/beta21/evidencias/21.2/`; `scripts/test-statement-import.mjs`). Contenção mantida até o fechamento da beta.21 (21.3 pendente) |
 | FIN-02 | `importedId` não determinístico (`Date.now()`) | reimportação pode duplicar | `importers.js:36,135` | beta.21 (21.3) | FIN-01 | ABERTO |
-| FIN-03 | Linha CSV descartada sem aviso (apóstrofo alterna aspas); linha inválida sem relatório | movimento faltando | probe; `visual/08-importacao/revisao-duplicatas.png` | beta.21 (21.2) | gate Fase 0 | CONFIRMADO NA UI |
+| FIN-03 | Linha CSV descartada sem aviso (apóstrofo alterna aspas); linha inválida sem relatório | movimento faltando | probe; `visual/08-importacao/revisao-duplicatas.png` | beta.21 (21.2) | gate Fase 0 | **CORRIGIDO NA 21.2, aguardando aprovação** (leitor RFC 4180; todo registro não vazio vira válido ou rejeitado com linha e motivo; `docs/audit/beta21/evidencias/21.2/`; `scripts/test-statement-import.mjs`) |
 | **FIN-05** **(D-002)** | Datas civis em UTC: após 21h (BRT) o lançamento recebe a data do dia seguinte; o painel o trata como futuro e o exclui do saldo | **saldo principal errado** por até 3 h/dia; mês, fatura e orçamento errados | `visual/03-lancamentos/modal-novo-lancamento.png` (03/11 às 23h de 02/11); `visual/02-dashboard/dashboard-com-dados-1440.png`; `dashboardSummary.js` (`tx.date <= todayISO` local); V-01, V-02 | beta.21 ou 1º item da beta.22 (a decidir no plano do incremento) | — | CONFIRMADO NA UI |
 | **FIN-08** **(D-002)** | Divergência entre saldo do ledger e do painel; destaque "Saldo disponível" não corresponde ao saldo da conta (R$ 0,00 com realizado −R$ 1,23 mi) | usuário lê saldo errado | `ledger.js` × `dashboardSummary.js`; `visual/02-dashboard/dashboard-com-dados-1440.png`; `visual/responsivo/768x1024/dashboard.png`; V-04 | beta.22 (conceito único de saldo + rótulos) | FIN-05 | CONFIRMADO NA UI |
 | **DATA-02** **(D-002)** | Recuperação silenciosa: com principal corrompido e LKG válido, o LKG sobrescreve o principal sem preservar os bytes corrompidos e sem avisar | perda de evidência e de dados não refletidos no LKG; usuário não sabe que houve recuperação | `storage.js:75-95`; `visual/14-recuperacao/principal-corrompido-com-copia.png`; V-07 | beta.22 | P0-5 | CONFIRMADO NA UI |
@@ -62,11 +62,12 @@ Estados: `ABERTO` · `CONFIRMADO NA UI` (reproduzido na validação visual) · `
 | **AI-01** **(D-003)** | Assistente comunica situação positiva ("finanças… sob controle!") diante de saldo negativo/inconsistente | `visual/07-planejamento/pergunta-barra-superior.png`; V-05 | beta.22 ou Alpha 1 (regras de mensagem + caso de avaliação, Plano §40/§42) | FIN-08 | CONFIRMADO NA UI |
 | SEC-01 | `electron/main.js`/`preload.js` residuais e inseguros (inativos) | `git show f011bcf --stat` | beta.21 (21.1) | gate Fase 0 | ABERTO |
 | EST-05/EST-06 | 3 testes fora do runner; sem CI | `package.json` | beta.21 (21.1) | — | ABERTO |
-| FIN-04 | "compra"/"pagamento" na descrição força despesa (estorno vira saída) | probe; `visual/08-importacao/revisao-duplicatas.png` | beta.21 (21.2) | — | CONFIRMADO NA UI |
+| FIN-04 | "compra"/"pagamento" na descrição força despesa (estorno vira saída) | probe; `visual/08-importacao/revisao-duplicatas.png` | beta.21 (21.2) | — | **CORRIGIDO NA 21.2, aguardando aprovação** (sinal só do valor; `docs/audit/beta21/evidencias/21.2/`; `scripts/test-statement-import.mjs`) |
 | FIN-06 | Sanitizador inventa `status`/`date`/`type` e descarta campos | `sanitize.js:44-50` | beta.22 — exige backup, dry-run e regra aprovada | P0-5 | ABERTO |
 | FIN-07 | Sem moeda explícita | busca por `currency` | Alpha 1 | ADR-004 | ABERTO |
 | FIN-09 | Idempotência em `useRef`/`setTimeout` | `App.jsx:584-658` | Alpha 1 (casos de uso) | ADR-003 | ABERTO |
 | FUN-03 | Sem transferência na UI | `TransactionModal.jsx` | Alpha 2 | Alpha 1 | ABERTO |
+| **IMP-01** | Importação: `predictCategory` (`categoryLearning.js:144-152`) devolve IDs fixos inexistentes (`alimentacao`, `transporte`, `lazer`) para descrições com "padaria", "restaurante", "açaí", "ifood", "uber", "posto", "combustivel", "99", "netflix", "spotify", "cinema", "steam"; `applyReconciliationDecisions` rejeita a categoria e **ignora o item** na confirmação (aviso no diálogo, não silencioso). Existia na beta.20, mascarado por FIN-03. Achado no E2E da 21.2 | `docs/audit/beta21/evidencias/21.2/e2e-21.2-resultado.json` (`csv_apply`) | **a decidir pelo proprietário** (fora do escopo da 21.2) | — | ABERTO |
 | FUN-04 / V-03 | Categorias não filtradas por tipo; receita recebe "Alimentação" por padrão | `visual/02-dashboard/dashboard-com-dados-1440.png` | Alpha 2 | Alpha 1 | CONFIRMADO NA UI |
 | FUN-05 | Pagamento de fatura: alerta de sucesso antes da persistência | `App.jsx:593-617`; diálogo registrado em `_resultados/responsive.json` | beta.22 (com P0-5) | — | CONFIRMADO NA UI |
 | REQ-INV-PAY-001 | Pagamento de fatura hoje bloqueado com saldo insuficiente; requisito aprovado para permitir registro com aviso e confirmação | `docs/PRODUCT/REQUIREMENTS.md`; `visual/13-cartoes/apos-pagamento.png` | Alpha 3 | P0-5, FUN-02, FUN-09, FIN-08 | REQUISITO APROVADO (D-005), não implementado |
@@ -90,7 +91,8 @@ Estados: `ABERTO` · `CONFIRMADO NA UI` (reproduzido na validação visual) · `
 | V-11 | Campos do modal de lançamento sem rótulo associado; "✕" sem nome acessível | `_resultados/responsive.json` | idem | CONFIRMADO NA UI |
 | V-12 | Alvos de toque de 22 px em 375–768 | `_resultados/responsive.json` | idem | CONFIRMADO NA UI |
 | V-13 | "Restaurar Backup" inacessível por teclado; busca sem indicador de foco; foco não entra no menu móvel | `_resultados/restore.json`, `responsive.json` | idem | CONFIRMADO NA UI |
-| V-14 | Revisão de importação indica entrada/saída só por cor | `visual/08-importacao/revisao-duplicatas.png` | beta.21 (21.2) se a tela for tocada; senão Alpha 4 | CONFIRMADO NA UI |
+| V-14 | Revisão de importação indica entrada/saída só por cor | `visual/08-importacao/revisao-duplicatas.png` | beta.21 (21.2) se a tela for tocada; senão Alpha 4 | **CORRIGIDO NA 21.2, aguardando aprovação** ("Entrada +"/"Saída −" em texto; `evidencias/21.2/01-csv-revisao.png`) |
+| UX-02 | Importador: fechar pelo ✕ mantém a etapa de revisão; ao reabrir, aparece a revisão anterior (comportamento da beta.20, observado no E2E da 21.2) | `docs/audit/beta21/evidencias/21.2/e2e-import-21-2.cjs` (`closeModal`) | Alpha 4 ou próximo incremento que tocar o modal | ABERTO |
 | V-21 | Dispensa de alerta não persiste; valor do alerta com ponto decimal | `visual/dedicados/alerta/` | Alpha 3/5 | CONFIRMADO NA UI |
 | FUN-06 | Recorrência só mensal | `recurring.js` | Alpha 3 | ABERTO |
 | FUN-07 / V-15 | Perfil ativo e aba não persistem | `_resultados/functional.json` | Alpha 1 (workspace ativo) | CONFIRMADO NA UI |
@@ -135,4 +137,5 @@ Estados: `ABERTO` · `CONFIRMADO NA UI` (reproduzido na validação visual) · `
 | 02/11/2026 | Criação a partir do Relatório da Fase 0 (Incremento 0.1) |
 | 02/11/2026 | Validação visual: FIN-05, FIN-08, DATA-02 → P0 (D-002); AI-01 P1 (D-003); V-xx incorporados (D-004); DATA-05 confirmado por teste dedicado; SEC-09 verificado sem defeito; REQ-INV-PAY-001 registrado (D-005) |
 | 02/11/2026 | DATA-05 → **P0** (D-009), com ficha (perda de acesso × perda física), contenção e critérios de aceite obrigatórios na Alpha 1; PROC-04 decidido: evidências no Git normal (D-010) |
+| 03/11/2026 | 21.2 implementada (aguarda aprovação do proprietário): FIN-01, FIN-03, FIN-04 e V-14 corrigidos com testes unitários, de propriedade, de regressão e E2E. Novos achados IMP-01 (P1, categoria inexistente na importação) e UX-02 (P2, modal reabre na revisão anterior). Formatos com colunas de débito/crédito ou natureza D/C passam a ser recusados explicitamente (pipeline completo §27.2 fica para Alpha 2/4) |
 | 03/11/2026 | 21.1 concluída (commit `4549207`, CI verde em 4 combinações): SEC-01 tratado no repositório (residuais removidos + teste de contrato); EST-05/EST-06 tratados (3 testes de domínio no runner; CI). Novo achado EST-09 (P3) registrado. Status final de SEC-01/EST-05/EST-06 será atualizado no fechamento da beta.21 |
