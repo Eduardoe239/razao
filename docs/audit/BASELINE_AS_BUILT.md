@@ -42,9 +42,31 @@ Navegação definida em `src/components/AppShell.jsx`; renderização condiciona
 | `audit` — Histórico de Auditoria | `AuditHistoryPanel` | PARC (500 eventos FIFO) |
 | `integrity` — Integridade Financeira | `AuditIntegrityPanel` | ISE |
 | Modais | `TransactionModal`, `AccountBalanceReconciliationModal`, `ImportReconciliationModal`, `DiagnosticModal` | ver Relatório §4 |
-| Estados globais | `SplashScreen`, `StartupRecoveryScreen` (fail-closed), `ErrorBoundary` | ISE; `ErrorBoundary` com risco DATA-05 |
+| Estados globais | `SplashScreen`, `StartupRecoveryScreen` (fail-closed), `ErrorBoundary` | ISE; `ErrorBoundary` Web DEF (DATA-05, P0); Desktop não verificado |
 
 Não existe tela de criação/edição de contas, cartões, transferências, cadastro ou login.
+
+### 3.1 Resultado da validação visual/funcional por tela (02/11/2026)
+
+Fonte: `fase0/RELATORIO_VALIDACAO_VISUAL_BETA20.md` (aprovado como evidência técnica, D-001). Estados do Plano C.2.5; "validada" = exercitada na UI com dados fictícios, não produção.
+
+| Tela | Estado após validação | Achados |
+|---|---|---|
+| Visão geral | ISE — ações OK; **saldo do destaque não confiável** | FIN-05/FIN-08 (**P0**), V-03, V-17 |
+| Lançamentos | ISE — jornada completa validada | V-10/V-11 (modal), V-12, V-17, V-18 |
+| Cartões e faturas | DEF — sem cadastro; ciclo/pagamento OK só com cartão injetado | FUN-02, REQ-INV-PAY-001 |
+| Orçamentos | ISE — sem valor restante | V-09 |
+| Relatórios | ISE — valores grandes vazam | V-08 |
+| Importar dados | DEF | FIN-01/03/04, V-14 |
+| Planejamento | PROT — rotulado "Motor determinístico"; mensagem enganosa; alerta dispensável (não persiste) | AI-01 (P1), V-21 |
+| Perfil / Preferências | ISE — persistência validada | FUN-07 (aba/perfil ativos não persistem) |
+| Histórico / Integridade | ISE | — |
+| Diagnóstico (backup/restauração) | ISE — restauração com confirmação; backup em texto legível; restauração inacessível por teclado | SEC-03, V-13 |
+| Recuperação de inicialização | ISE (fail-closed) quando não há cópia; **DEF** quando há cópia (silenciosa) | DATA-02 (**P0**) |
+| Tela de erro (`ErrorBoundary`) Web | DEF — recuperação local: app reabre vazio sem aviso; autosave grava estado vazio no principal e no LKG; dados preservados só na cópia interna `…pre-restore-backup`, sem acesso pela UI | DATA-05 (**P0**, Alpha 1) |
+| Tela de erro Desktop | NÃO VERIFICADA | — |
+| Responsividade 375–1440 / zoom 200% | ISE — sem rolagem horizontal ou controles ocultos | V-12 |
+
 
 ## 4. Inventário de capacidades
 

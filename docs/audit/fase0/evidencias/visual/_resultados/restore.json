@@ -1,0 +1,25 @@
+{
+ "export": {
+  "file": "razao-backup-2026-11-03.json",
+  "bytes": 22016,
+  "plaintextReadable": true,
+  "dialogs": [],
+  "shot": "14-recuperacao/apos-exportar-backup.png"
+ },
+ "restoreControlTag": "LABEL tabindex=null",
+ "restoreDismiss": {
+  "dialogs": [
+   {
+    "type": "confirm",
+    "message": "Backup de 02/11/2026, 23:10:42.\n\nContas: 2\nLançamentos: 9\nCartões: 1\nEventos de auditoria: 15\n\nA restauração substituirá os dados financeiros atuais. Exporte um backup atual antes de continuar. Deseja restaurar?",
+    "action": "accept"
+   }
+  ],
+  "txAfter": 9,
+  "n0": 9,
+  "uiText": "🛡️\nDiagnóstico de Saúde & Beta-Tester\n\nVerificação de integridade para distribuição em grupo fechado (.exe / Web)\n\n✕\nAmbiente Atual:\n🌐 Web Browser (SPA)\nVersão do Schema:\nv4.0\n⚡ Executar Bateria de Testes\n💾 Exportar Backup (.json)\n↩️ Restaurar Backup\n\nBackup validado e aplicado. Os dados anteriores foram preservados em uma cópia de recuperação quando havia estado salvo. Confira os dados no painel.\n\nGerenciador de backups\n\nAté cinco cópias locais recentes; também exporte arquivos JSON externos",
+  "shot": "14-recuperacao/restaurar-confirmacao.png"
+ },
+ "catalog": "[{\"id\":\"1793671842899-gecxm0\",\"createdAt\":\"2026-11-03T02:10:42.899Z\",\"label\":\"Backup exportado pelo painel de diagnóstico\",\"backupText\":\"{\\\"format\\\":\\\"orazao-backup\\\",\\\"formatVersion\\\":1,\\\"createdAt\\\"",
+ "console": []
+}

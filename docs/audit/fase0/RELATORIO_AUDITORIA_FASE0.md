@@ -5,7 +5,11 @@
 **Modo:** somente leitura sobre o código. Nenhum arquivo rastreado foi alterado; nenhum commit, push, pull, reset, checkout, merge ou migração foi executado.
 **Situação da Fase 0:** **ABERTA** — diagnóstico entregue; aguarda avaliação do proprietário. Há itens não verificáveis neste ambiente (ver §12.2).
 
+> **Encerramento (02/11/2026):** Fase 0 **ENCERRADA** por aprovação formal do proprietário (D-012, `docs/PRODUCT/DECISIONS.md`). A situação "ABERTA" acima é o registro histórico da data da auditoria. Baseline, evidências e limitações: `docs/PROJECT_STATUS.md` §2.
+
 > **Atualização 02/11/2026 (Incremento 0.1, executado no notebook do proprietário):** a identidade do notebook e o hash do ZIP beta.20 foram **verificados** e `npm test` foi executado no notebook (exit 0). Ver §2.3 e `evidencias/notebook-verificacao.txt`. Pendências remanescentes do gate: validação visual/manual pelo proprietário e aprovação formal (ver `docs/PROJECT_STATUS.md`). As seções originais abaixo foram mantidas como registro histórico; onde a atualização as supera, isso está indicado.
+
+> **Atualização 02/11/2026 (validação visual e decisões do proprietário):** checklist visual/funcional executado e **aprovado como evidência técnica** (D-001) — ver §2.4 e `RELATORIO_VALIDACAO_VISUAL_BETA20.md`. **FIN-05, FIN-08 e DATA-02 elevados a P0** (D-002); **DATA-05 elevado a P0 e alocado como correção obrigatória da Alpha 1** (D-009); evidências visuais mantidas no Git normal, sem LFS (D-010); assistente enganoso registrado como **AI-01 (P1)** (D-003); requisito de pagamento de fatura com saldo insuficiente aprovado (`docs/PRODUCT/REQUIREMENTS.md`, REQ-INV-PAY-001). Severidades vigentes: `docs/risks/RISK_REGISTER.md`. A Fase 0 **não** está concluída: falta a aprovação formal do fechamento.
 
 Convenção: **[FATO]** = verificado por código, comando ou execução; **[HIPÓTESE]** = inferência ainda não comprovada; **[RECOMENDAÇÃO]** = proposta técnica sujeita a aprovação.
 
@@ -99,6 +103,9 @@ Carregada e utilizada nesta fase: **`razao-baseline-audit`** (contrato da Fase 0
 
 **Conclusão:** a [HIPÓTESE forte] de §2.1 passa a **[FATO]**: o código em `f011bcf`/`f59a67e` é a beta.20 de referência + lockfile + 4 arquivos residuais do merge. Não existe versão posterior à beta.20 no notebook. A base oficial recomendada em §3 está confirmada (sujeita à aprovação do proprietário); o item 1 e o item 2 das condições de §3 estão cumpridos. O item 3 (remoção dos residuais) permanece para a beta.21.
 
+### 2.4 Validação visual e funcional da beta.20 (02/11/2026) — [FATO]
+Checklist `CHECKLIST_VALIDACAO_VISUAL_BETA.20.md` executado integralmente no notebook (Chrome, perfil temporário, dados fictícios), 6 larguras + zoom 200%, 159 capturas com índice e `SHA256SUMS` (`evidencias/visual/INDICE.md`). Relatório: `RELATORIO_VALIDACAO_VISUAL_BETA20.md`. Resultado: estrutura responsiva íntegra; falhas confirmadas na UI para FIN-01/03/04/05/08, DATA-02/05, FUN-02/04/07, SEC-03 e acessibilidade (V-10…V-14); SEC-09 verificado sem defeito. Testes dedicados: T1 alerta gerado e dispensado (**PASS**, dispensa não persiste); T2 recuperação local do `ErrorBoundary` Web (**FAIL**, DATA-05 — perda de acesso; cópia interna preservada). Tela de erro Desktop: **NÃO VERIFICADA**. Aprovado pelo proprietário como evidência técnica da baseline (D-001).
+
 ---
 
 ## 3. Melhor base de desenvolvimento
@@ -135,14 +142,14 @@ Observação geral: **nada é PV.** Não existe suíte E2E no repositório; o sm
 | Contas | **DEF (jornada incompleta)** | Saldo derivado em `ledger.js` OK, mas **não existe UI para criar, editar, arquivar ou excluir contas**. Estado inicial cria 1 conta PF e 1 PJ fixas (`createFreshState`). Smoke E2E confirma ausência. |
 | Transações (receita/despesa) | **ISE** | Criar/editar/excluir/alternar status funcionam (E2E smoke). Defeitos: exclusão física (DATA-03), data padrão em UTC (FIN-05), categorias de receita oferecidas para despesa, sem split, sem estorno formal. |
 | Transferências | **PARC** | Domínio suporta (`ledger.js`, validação). **Sem UI para criar transferência** — `TransactionModal` só oferece receita/despesa. |
-| Cartões e faturas | **DEF (inalcançável)** | Domínio de ciclos (`invoices.js`) e pagamento (`invoicePayment.js`) testados, mas **não há UI para cadastrar cartão** nem para lançar compra no cartão (o modal lista apenas contas). Só o primeiro cartão (`cards[0]`) é exibido. Sem pagamento parcial, estorno, crédito, limite. |
+| Cartões e faturas | **DEF (inalcançável)** | Domínio de ciclos (`invoices.js`) e pagamento (`invoicePayment.js`) testados, mas **não há UI para cadastrar cartão** nem para lançar compra no cartão (o modal lista apenas contas). Só o primeiro cartão (`cards[0]`) é exibido. Sem pagamento parcial, estorno, crédito, limite. *Validação 02/11:* com cartão fictício injetado, ciclo e pagamento funcionam (1 transferência, sem dupla contagem); pagamento bloqueado com saldo insuficiente (ver REQ-INV-PAY-001). |
 | Parcelamentos | **INEX** | Apenas campos `installmentsTotal/Index` no sanitizador; nenhuma lógica/UI. |
 | Orçamentos | **ISE** | Limite mensal por categoria, mês atual apenas; inclui compras de cartão por data de compra (correto); sem rollover, sem períodos, sem orçado×projetado. |
 | Recorrências | **PARC** | Só **mensal** (`dayOfMonth`); geração idempotente por `recurring:{id}:{date}` (bom); sem exceções, edição "esta e futuras", fim de mês documentado. |
 | Compromissos / calendário | **PARC** | Lista "Próximos compromissos" (3 meses); sem calendário. |
 | Previsões | **PROT** | `scenarioSimulator.js` usa multiplicadores fixos (0,85/0,90/1,15) — o Plano veda isso como probabilidade. `forecast.js` e `savings.js` só usados em testes. |
 | Relatórios | **ISE** | `FinancialCharts`, `ExpenseAnalytics` (gráficos simples, sem alternativa tabular verificada). |
-| Busca / exportação de lançamentos | **ISE** | `transactionSearch.js` com testes. Proteção contra CSV formula injection **NV**. |
+| Busca / exportação de lançamentos | **ISE** | `transactionSearch.js` com testes. Proteção contra CSV formula injection **verificada na UI em 02/11/2026** (`'=SOMA…`, SEC-09). |
 | Importação CSV/OFX | **DEF** | Erros de escala monetária comprovados (FIN-01), IDs não determinísticos (FIN-02), perda silenciosa de linhas (FIN-03). |
 | Conciliação de importação | **ISE** | Heurística explicável; não descarta por similaridade; baixa pendentes por match. Bom desenho; depende de parser defeituoso. |
 | Conferência de saldo de extrato / ajuste | **ISE** | `balanceReconciliation.js` + `balanceCorrection.js` com chave de reconciliação. |
@@ -153,15 +160,15 @@ Observação geral: **nada é PV.** Não existe suíte E2E no repositório; o sm
 | Recuperação de boot (fail-closed) | **ISE** | E2E smoke: armazenamento corrompido → tela "Recuperação segura", bytes corrompidos preservados, autosave bloqueado. |
 | Trilha de auditoria | **PARC** | Eventos com before/after locais; **limitada a 500 eventos com descarte FIFO** (DATA-04); mutável; não é append-only. |
 | Painel de integridade / diagnóstico | **ISE** | `auditIntegrity.js`, `DiagnosticModal`. |
-| IA (Assistente) | **PROT** | Regras determinísticas locais (`aiContextEngine.js`, `anomalyDetector.js`); **sem LLM**. Rotulagem precisa ser verificada visualmente. |
+| IA (Assistente) | **PROT** | Regras determinísticas locais (`aiContextEngine.js`, `anomalyDetector.js`); **sem LLM**. Rotulagem verificada em 02/11 ("Motor determinístico"); resposta pode ser enganosa com saldo negativo (AI-01, P1). |
 | OCR | **DEMO** | Regex sobre texto colado (`ocrService.js`); sem OCR de imagem; fail-closed para imagem. |
 | Open Finance | **DEMO** | Simulador em memória com dados sintéticos; rotulado como demonstração; **itens sintéticos podem ser importados no livro real se selecionados** (SEC-05). |
 | Backend | **INEX** | `api/` não tem servidor, `package.json`, rotas HTTP nem Prisma Client; as "rotas" são classes importadas **pelo frontend** (`src/services/apiClient.js`). Prisma schema sem workspace. |
 | Sincronização | **DEMO / código morto** | `syncQueue.js`/`localDb.js` não são importados pela UI; `outboxSync.js` usa `Map` em memória e **LWW** (proibido pelo Plano para dados financeiros). |
 | Segurança Electron | **ISE (boa)** | `main.cjs`: `contextIsolation`, `sandbox:true`, `nodeIntegration:false`, validação de remetente por URL exata, `safeStorage` sem fallback em texto puro, escrita atômica, bloqueio de popups/navegação. Windows real **NV**. |
 | Segurança Web | **PARC** | CSP em `<meta>` (inclui origens de dev em produção); `localStorage` **sem cifragem** (o app declara isso). |
-| Responsividade | **PARC** | Sem rolagem horizontal em 375 px (E2E); layout mobile com navegação inferior; demais breakpoints do Plano **NV**. |
-| Acessibilidade | **PARC / NV** | Há `aria-*`, roles, foco em alguns componentes; modal de transação sem foco contido/Escape; uso de `alert/confirm/prompt` nativos para fluxos financeiros; sem axe/NVDA. |
+| Responsividade | **ISE** | *Validação 02/11:* 375/390/768/1024/1366/1440 e zoom 200% sem rolagem horizontal, controles fora da tela ou cobertos pela navegação inferior; defeitos pontuais V-08/V-12. |
+| Acessibilidade | **PARC / NV** | Há `aria-*`, roles, foco em alguns componentes; modal de transação sem foco contido/Escape; uso de `alert/confirm/prompt` nativos para fluxos financeiros; sem axe/NVDA. *Validação 02/11:* confirmados V-10 a V-14 (modais sem Escape/foco contido, campos sem rótulo, alvos de 22 px, restauração inacessível por teclado, cor como único indicador). |
 | Build Web | **ISE** | `vite build` exit 0 (480,9 kB JS / 137,7 kB gzip). |
 | Build/distribuição desktop | **NV** (fora de escopo pela regra C.3) | `desktop:build` não executado. |
 
@@ -239,7 +246,7 @@ Monólito modular: Presentation → Application (casos de uso com contexto de wo
 | SEC-06 | P2 | 15 vulnerabilidades **moderadas** em dependências de build (cadeia `electron-builder`: minimatch, glob, temp…); **0 em produção** (`npm audit --omit=dev`) | `evidencias/npm-audit.txt` | Tratar na fase de release; não atualizar em massa |
 | SEC-07 | P2 | `saveFileDialog` aceita `filters` sem sanitização; `openFileDialog` OK | `main.cjs:461-475` | Sanitizar como em `openFileDialog` |
 | SEC-08 | P3 | CSP só por `<meta>` e com origens dev | `index.html` | Header/CSP por build |
-| SEC-09 | NV | Proteção contra CSV formula injection na exportação | não verificado | Teste específico |
+| SEC-09 | — | Proteção contra CSV formula injection na exportação | **verificado sem defeito em 02/11/2026** (`evidencias/visual/_resultados/export-csv-ficticio.csv`) | Manter como teste de regressão |
 
 Pontos positivos comprovados: auth falha fechada; OCR/Open Finance não fingem sucesso; Electron `main.cjs` segue a maioria dos controles do Plano §53; nenhum segredo encontrado no repositório (inspeção manual dos arquivos lidos; secret scanning automatizado **não** executado).
 
@@ -253,10 +260,10 @@ Pontos positivos comprovados: auth falha fechada; OCR/Open Finance não fingem s
 | FIN-02 | **P0** | Importação CSV **não idempotente**: `importedId = csv-${linha}-${Date.now()}`; OFX sem FITID idem | probe: IDs diferentes a cada importação | Reimportar o mesmo arquivo não é bloqueado por ID; depende da heurística "revisar" → risco de duplicidade |
 | FIN-03 | **P0** | **Perda silenciosa de linhas** no CSV: apóstrofo alterna "aspas" | probe: linha `D'Avila` desaparece sem aviso | Movimentos faltando sem erro |
 | FIN-04 | P1 | Descrição contendo "compra"/"pagamento" força **despesa** mesmo com valor positivo | probe: "Estorno de compra" +100 → despesa | Estorno vira gasto (erro de sinal = 2× o valor) |
-| FIN-05 | P1 | Datas civis calculadas em **UTC** (`toISOString().slice(0,10)`) em 31 pontos; ex.: data padrão do novo lançamento | `TransactionModal.jsx:20,30,38` | Após 21h (BRT) o lançamento cai no dia seguinte → mês/fatura/orçamento errados |
+| FIN-05 | **P0** (D-002; era P1) | Datas civis calculadas em **UTC** (`toISOString().slice(0,10)`) em 31 pontos; ex.: data padrão do novo lançamento | `TransactionModal.jsx:20,30,38` | Após 21h (BRT) o lançamento cai no dia seguinte → mês/fatura/orçamento errados. **Confirmado na UI:** o painel exclui esses lançamentos do "Saldo disponível" (saldo errado) |
 | FIN-06 | P1 | Sanitizador **inventa valores**: sem `status` → `pago`; sem `date` → hoje; sem `type` → despesa; e **descarta campos não listados** | `sanitize.js:44-50` | Contradiz o próprio comentário do módulo; pode efetivar pendências e apagar metadados futuros |
 | FIN-07 | P1 | Nenhuma noção de **moeda** nos registros | busca por `currency` | Bloqueia multi-moeda e viola Plano §33.1 |
-| FIN-08 | P1 | Saldo do ledger inclui lançamentos `pago` com **data futura**; painel exclui → dois "saldos" diferentes | `ledger.js` vs `dashboardSummary.js:123` | Inconsistência entre validação de pagamento e painel |
+| FIN-08 | **P0** (D-002; era P1) | Saldo do ledger inclui lançamentos `pago` com **data futura**; painel exclui → dois "saldos" diferentes | `ledger.js` vs `dashboardSummary.js:123` | Inconsistência entre validação de pagamento e painel |
 | FIN-09 | P1 | Idempotência só em `useRef` + `setTimeout` para ajustes e pagamentos (além da chave persistida no pagamento) | `App.jsx:584-616, 625-658` | Plano §33.5 exige unicidade persistida |
 | FIN-10 | P2 | Fatura vazia vencida aparece como "vencida"; faturas só do cartão principal | `invoices.js:97-99`; `App.jsx:226` | Indicadores confusos |
 | FIN-11 | P2 | Journal de partidas dobradas inexistente (transferência de 2 pernas apenas) | `ledger.js` | Direção arquitetural (ADR-004), não bloqueio imediato |
@@ -285,10 +292,10 @@ Pontos positivos comprovados: auth falha fechada; OCR/Open Finance não fingem s
 | ID | Sev. | Item |
 |---|---|---|
 | DATA-01 | P1 | `localStorage` como fonte canônica (quota ~5 MB, dobrada pelo LKG); sem IndexedDB/SQLite |
-| DATA-02 | P1 | Recuperação silenciosa: se o principal está inválido e o LKG é válido, o LKG **sobrescreve o principal sem preservar os bytes corrompidos e sem avisar o usuário** (`storage.js:75-80`; `main.cjs` `recoverLastKnownGood`) |
+| DATA-02 | **P0** (D-002; era P1) | Recuperação silenciosa: se o principal está inválido e o LKG é válido, o LKG **sobrescreve o principal sem preservar os bytes corrompidos e sem avisar o usuário** (`storage.js:75-80`; `main.cjs` `recoverLastKnownGood`) |
 | DATA-03 | P1 | Exclusão física de lançamentos efetivados (Plano §15.3/§28.2 exige reversão) |
 | DATA-04 | P1 | Trilha de auditoria truncada em **500 eventos** (FIFO, `auditLog.js:55,76`) — histórico perdido silenciosamente |
-| DATA-05 | P1 | "Redefinir estado" do `ErrorBoundary` (Web): remove a chave principal, recarrega em estado vazio, e o autosave **sobrescreve o LKG com o estado vazio**; a única cópia passa a ser o slot `pre-restore`, que é sobrescrito na próxima restauração (`ErrorBoundary.jsx:27-70`) |
+| DATA-05 | **P0** (D-009; era P1) | "Redefinir estado" do `ErrorBoundary` (Web): remove a chave principal, recarrega em estado vazio, e o autosave **sobrescreve o principal e o LKG com o estado vazio**; a única cópia passa a ser o slot `pre-restore` (`ErrorBoundary.jsx:27-70`). **Confirmado por teste dedicado em 02/11/2026:** principal 0 · LKG 0 · pré-restauração 2 lançamentos. **Perda de acesso comprovada** (app vazio, sem aviso, sem caminho na UI); **perda física definitiva da cópia interna não comprovada** (a cópia existia ao fim do teste; sobrescrita por restauração posterior é inferência do código, não testada). Correção obrigatória e prioritária na **Alpha 1** — critérios em `docs/risks/RISK_REGISTER.md` (ficha DATA-05). Desktop: NÃO VERIFICADO. |
 | QA-01 | P1 | 18 dos 55 scripts de teste são **puramente estáticos** (regex sobre o código-fonte) e outros 10 mistos — passam mesmo que o comportamento esteja errado |
 | QA-02 | P1 | Sem E2E automatizado, sem testes de propriedade, sem cobertura medida |
 | UX-01 | P2 | 276 blocos de estilo inline; sem design system de componentes (Plano §58) |
@@ -340,12 +347,12 @@ FIN-01, FIN-02, FIN-03, FIN-04, FUN-01, FUN-02, FUN-03, FUN-04, SEC-01 (presenç
 ### 12.2 Não verificado nesta sessão
 - ~~**Estado do notebook** (branch, commits, alterações locais, testes) — sem acesso.~~ **Verificado em 02/11/2026 (§2.3).**
 - ~~**Hash do ZIP beta.20** — arquivo não fornecido.~~ **Verificado em 02/11/2026 (§2.3).**
-- **Validação visual/manual da beta.20 no notebook** — pendente do proprietário (`CHECKLIST_VALIDACAO_VISUAL_BETA.20.md`, somente dados fictícios).
+- ~~**Validação visual/manual da beta.20 no notebook**~~ — **executada e aprovada como evidência técnica em 02/11/2026** (§2.4).
 - Execução Electron em Windows real; `safeStorage`; instalador.
-- Acessibilidade (axe, NVDA, teclado completo, zoom 200%), breakpoints 390/768/1024/1440.
+- Acessibilidade com axe e NVDA; teclado e zoom 200% foram verificados em 02/11 (§2.4). Breakpoints 390/768/1024/1440 verificados em 02/11.
 - Performance com 10k/50k/100k lançamentos e limite de quota do `localStorage`.
 - Secret scanning automatizado e licenças.
-- Rotulagem visual do Assistente/IA e de todas as telas (só o painel e o modal foram capturados).
+- ~~Rotulagem visual do Assistente/IA e de todas as telas~~ — verificada em 02/11 (§2.4). Permanecem NV: `ErrorBoundary` Desktop, outros navegadores, dispositivos reais.
 - Comportamento com fixtures volumosas pela UI (somente via testes de domínio).
 
 ---
@@ -360,9 +367,13 @@ FIN-01, FIN-02, FIN-03, FIN-04, FUN-01, FUN-02, FUN-03, FUN-04, SEC-01 (presenç
 | P0-3 | `importedId` determinístico (hash de conta+data+valor+descrição normalizada+ocorrência no arquivo; FITID quando houver) | FIN-02 | Reimportar o mesmo arquivo → 0 novos |
 | P0-4 | Decisão sobre cartões/contas na UI: implementar (Alpha 2/3) **ou** rotular/ocultar módulos inalcançáveis até lá | FUN-01, FUN-02 | Nenhuma tela anunciada sem jornada utilizável |
 | P0-5 | Falha de persistência visível e bloqueante (sem mensagem de sucesso antes da confirmação) | FUN-05, §9.1 | Teste de gravação falhando → UI mostra erro, sem "sucesso" |
+| P0-6 (D-002) | Datas civis no fuso local em todo ponto de criação/filtro | FIN-05 | Lançamento às 23h BRT recebe a data local; entra no saldo do dia |
+| P0-7 (D-002) | Conceito único de saldo entre ledger e painel, com rótulos claros | FIN-08 | Mesmo saldo por data de referência em ledger, painel e assistente |
+| P0-8 (D-002) | Recuperação que preserva bytes corrompidos e avisa o usuário | DATA-02 | Principal corrompido → bytes preservados + aviso explícito |
+| P0-9 (D-009) | Recuperação local sem perda de acesso nem sobrescrita destrutiva — **Alpha 1, obrigatória** | DATA-05 | 6 critérios da ficha DATA-05 (`RISK_REGISTER.md`): cópias acessíveis, preservação antes de sobrescrita, sem autosave destrutivo, aviso explícito, ação informada, testes de regressão |
 
 ### P1 — essenciais
-P1-1 Remover `electron/main.js`, `preload.js`, `dir`, `type` (SEC-01, EST-07) · P1-2 Datas civis em fuso local/workspace (FIN-05) · P1-3 Sanitizador sem defaults inventados e preservando campos (FIN-06) · P1-4 Auditoria sem truncamento silencioso + arquivamento (DATA-04) · P1-5 Recuperação que preserva bytes corrompidos e avisa (DATA-02) · P1-6 Corrigir "redefinir estado" (DATA-05) · P1-7 Exclusão → cancelamento/reversão (DATA-03) · P1-8 UI de transferência + filtro de categorias (FUN-03, FUN-04) · P1-9 Moeda explícita (FIN-07) · P1-10 Um conceito de saldo por data de referência (FIN-08) · P1-11 Runner de testes completo + CI mínima (npm ci/test/build) (EST-05, EST-06) · P1-12 Substituir testes estáticos críticos por testes comportamentais (QA-01) · P1-13 ADR-001/002/003 (modo local, Workspace, storage) · P1-14 Workspace/Membership local + migração dry-run (Plano §11.7) · P1-15 Remover mocks de backend do bundle (EST-02) · P1-16 Bloquear gravação de dados demo no livro real (SEC-05) · P1-17 README/versão alinhados (DOC-01).
+P1-1 Remover `electron/main.js`, `preload.js`, `dir`, `type` (SEC-01, EST-07) · P1-2 Datas civis em fuso local/workspace (FIN-05) · P1-3 Sanitizador sem defaults inventados e preservando campos (FIN-06) · P1-4 Auditoria sem truncamento silencioso + arquivamento (DATA-04) · P1-5 Recuperação que preserva bytes corrompidos e avisa (DATA-02) · P1-6 Corrigir "redefinir estado" (DATA-05) — **reclassificado P0 (D-009) e substituído por P0-9, Alpha 1** · P1-7 Exclusão → cancelamento/reversão (DATA-03) · P1-8 UI de transferência + filtro de categorias (FUN-03, FUN-04) · P1-9 Moeda explícita (FIN-07) · P1-10 Um conceito de saldo por data de referência (FIN-08) · P1-11 Runner de testes completo + CI mínima (npm ci/test/build) (EST-05, EST-06) · P1-12 Substituir testes estáticos críticos por testes comportamentais (QA-01) · P1-13 ADR-001/002/003 (modo local, Workspace, storage) · P1-14 Workspace/Membership local + migração dry-run (Plano §11.7) · P1-15 Remover mocks de backend do bundle (EST-02) · P1-16 Bloquear gravação de dados demo no livro real (SEC-05) · P1-17 README/versão alinhados (DOC-01).
 
 ### P2 — expansão/qualidade
 Recorrências completas (FUN-06) · persistir workspace ativo (FUN-07) · substituir `prompt/confirm` (FUN-08) · pagamento parcial e refazer pagamento cancelado (FUN-09) · faturas multi-cartão (FIN-10) · IndexedDB (DATA-01) · design system/tokens (UX-01) · E2E Playwright + axe (QA-02) · CSP por ambiente, sanitizar `saveFileDialog` (SEC-07, SEC-08) · aviso/cifra de backup (SEC-03) · remover código morto (EST-04) · previsão sem multiplicadores fixos.

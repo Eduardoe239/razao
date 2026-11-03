@@ -1,7 +1,7 @@
 # O Razão — controle financeiro pessoal
 
 **Versão:** `1.22.0-beta.20`  
-**Estado:** desenvolvimento; **Fase 0 (auditoria e baseline) aberta**. Não é uma versão certificada para produção.
+**Estado:** desenvolvimento; **Fase 0 (auditoria e baseline) encerrada em 02/11/2026**; Alpha 1 autorizada, não iniciada. Não é uma versão certificada para produção: há riscos P0 abertos (ver `docs/risks/RISK_REGISTER.md`).
 
 O Razão é um aplicativo local-first para organizar contas, lançamentos, cartões e faturas, limites de orçamento, recorrências, importações e conciliação. Esta distribuição prioriza consistência dos dados e recuperação; as jornadas reais e a revisão visual no ambiente do usuário ainda fazem parte da validação da Fase 0.
 
@@ -90,4 +90,4 @@ Registros históricos da beta.18 (superados nos pontos em que divergem dos docum
 
 ## Status da Fase 0
 
-A Fase 0 **permanece aberta até que todos os critérios de saída do Plano Mestre estejam demonstrados** (situação de cada critério em [`docs/PROJECT_STATUS.md`](./docs/PROJECT_STATUS.md)). Testes automatizados aprovados não substituem revisão visual de telas, jornadas reais Web/Electron, testes de falha/quota, verificação independente de segurança, fechamento de riscos S0/S1 e aprovações dos gates G1–G9.
+A Fase 0 foi **encerrada em 02/11/2026** por aprovação formal do proprietário (decisão D-012), com a baseline `1.22.0-beta.20`, evidências e limitações registradas em [`docs/PROJECT_STATUS.md`](./docs/PROJECT_STATUS.md). O encerramento não resolve os riscos P0 conhecidos nem declara o produto pronto. Testes automatizados aprovados não substituem revisão visual de telas, jornadas reais Web/Electron, testes de falha/quota, verificação independente de segurança, fechamento de riscos S0/S1 e aprovações dos gates G1–G9.

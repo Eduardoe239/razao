@@ -18,5 +18,9 @@ Leia integralmente `PLANO_MESTRE_O_RAZAO_V2.0.md` antes de qualquer implementaç
 - Todo trabalho deve ter critérios de aceite e testes. Registre resultados reais, limitações e evidências. Nunca esconda uma falha.
 - Não priorize instalador/`electron-builder` antes da fase final de distribuição, salvo necessidade de validação expressamente justificada.
 
+## Regras complementares obrigatórias
+Decisões do proprietário em `docs/PRODUCT/DECISIONS.md` complementam o Plano Mestre sem reescrevê-lo.
+- **Saída de cada Alpha (D-011, RC-001):** uma Alpha **não** está concluída porque a implementação terminou. Após o gate técnico do Plano, prepare o pacote de avaliação (versão e hash imutáveis, changelog, matriz de funcionalidades, limitações conhecidas, critérios de aceite, roteiro de testes, dados sintéticos, evidências de QA, formulário estruturado), submeta-o a avaliação externa multidisciplinar compatível com o escopo, trie o feedback, implemente e reteste as correções necessárias e obtenha a aprovação formal do proprietário antes de congelar a versão ou iniciar a Alpha seguinte. Nunca declare uma Alpha encerrada sem essa aprovação.
+
 ## Primeira entrega obrigatória
 Produza baseline as-built do repositório do notebook, inventário de recursos e mocks, mapa de persistência, matriz de mutações financeiras, matriz de isolamento PF/PJ, riscos P0/P1/P2/P3 e resultado de `npm test`. Depois proponha um backlog pequeno e ordenado, conforme o plano mestre.

@@ -1,0 +1,139 @@
+{
+ "alerta": {
+  "before": {
+   "count": "1 alerta",
+   "buttons": 1,
+   "titles": [
+    "Possível Cobrança Duplicada"
+   ],
+   "texts": [
+    "Encontrados dois lançamentos de R$ 59.90 com a descrição \"Assinatura de streaming fictícia\" em intervalo de 0 dia(s)."
+   ]
+  },
+  "after": {
+   "count": "0 alertas",
+   "buttons": 0,
+   "emptyState": 1
+  },
+  "transactionsAfterDismiss": 2,
+  "afterNavigate": "1 alerta",
+  "afterReload": "1 alerta",
+  "console": [],
+  "shots": [
+   "dedicados/alerta/01-alerta-gerado.png",
+   "dedicados/alerta/02-alerta-dispensado.png",
+   "dedicados/alerta/03-apos-recarregar.png"
+  ]
+ },
+ "recuperacaoLocal": {
+  "boundary": true,
+  "boundaryText": "!\nRECUPERAÇÃO DA INTERFACE\nO Razão encontrou um problema\n\nA interface encontrou um erro inesperado. Esta tela não permite confirmar a integridade de todos os dados. Evite redefinir o estado sem uma cópia verificada.\n\nDetalhes técnicos do erro\nRecarregar aplicação\nTentar recuperação local\n\nA recuperação local cria e verifica uma cópia antes de qualquer redefinição. Se não conseguir confirmar a cópia, o estado atual será preservado.",
+  "storageBefore": {
+   "razao_app_state_v3": {
+    "len": 2710,
+    "tx": 2,
+    "descr": [
+     "Mercado fictício",
+     "Salário fictício"
+    ]
+   },
+   "razao_app_state_v3.last-known-good": {
+    "len": 3258,
+    "tx": 2,
+    "descr": [
+     "Mercado fictício",
+     "Salário fictício"
+    ]
+   }
+  },
+  "storageAtError": {
+   "razao_app_state_v3": {
+    "len": 2710,
+    "tx": 2,
+    "descr": [
+     "Mercado fictício",
+     "Salário fictício"
+    ]
+   },
+   "razao_app_state_v3.last-known-good": {
+    "len": 3258,
+    "tx": 2,
+    "descr": [
+     "Mercado fictício",
+     "Salário fictício"
+    ]
+   }
+  },
+  "dismiss": {
+   "dialogs": [
+    {
+     "type": "confirm",
+     "message": "Deseja redefinir o estado local para tentar recuperar a aplicação? Antes, uma cópia será criada e verificada.",
+     "action": "dismiss"
+    }
+   ],
+   "storage": {
+    "razao_app_state_v3": {
+     "len": 2710,
+     "tx": 2,
+     "descr": [
+      "Mercado fictício",
+      "Salário fictício"
+     ]
+    },
+    "razao_app_state_v3.last-known-good": {
+     "len": 3258,
+     "tx": 2,
+     "descr": [
+      "Mercado fictício",
+      "Salário fictício"
+     ]
+    }
+   }
+  },
+  "accept": {
+   "dialogs": [
+    {
+     "type": "confirm",
+     "message": "Deseja redefinir o estado local para tentar recuperar a aplicação? Antes, uma cópia será criada e verificada.",
+     "action": "accept"
+    }
+   ],
+   "screen": "Visão geral",
+   "storageAfterReload": {
+    "razao_app_state_v3": {
+     "len": 1203,
+     "tx": 0,
+     "descr": []
+    },
+    "razao_app_state_v3.pre-restore-backup": {
+     "len": 3269,
+     "tx": 2,
+     "descr": [
+      "Mercado fictício",
+      "Salário fictício"
+     ]
+    },
+    "razao_app_state_v3.last-known-good": {
+     "len": 1531,
+     "tx": 0,
+     "descr": []
+    }
+   },
+   "visibleText": "PESSOAL\nVISÃO FINANCEIRA\nVisão geral\n\nResumo do seu dinheiro e do período.\n\nDiagnóstico\nNovo lançamento\nAtenção: separação PF/PJ ainda parcial; contas, cartões, categorias e orçamentos ainda não têm isolamento completo. Não use essa alternância como garantia de segregação contábil, fiscal ou de acesso. Os dados permanecem neste dispositivo.\nSemana\nMês\n3 meses\n‹\nNovembro de 2026 · PF\n›\nConferir sal",
+   "shot": "dedicados/recuperacao-local/02-apos-recuperacao-local.png",
+   "diagnosticText": "Gerenciador de backups\n\nAté cinco cópias locais recentes; também exporte arquivos JSON externos\n\nAtualizar\n\nNenhuma cópia histórica disponível neste dispositivo ainda.\n\nFechar Painel\nO Razão · Suas finanças, com lógica.\nSeus dados permanecem neste dispositivo, conforme o modo de armazenamento configurado.",
+   "shotDiag": "dedicados/recuperacao-local/03-diagnostico-apos-recuperacao.png"
+  },
+  "console": [
+   {
+    "type": "error",
+    "text": "%o\n\n%s\n\n%s\n Error: FALHA INJETADA PELO TESTE (harness) — valor sentinela 777,77\n    at NumberFormat.value (<anonymous>:7:108)\n    at formatMoney (http://localhost:3000/src/domain/money.js:31:5)\n    at"
+   },
+   {
+    "type": "error",
+    "text": "CRITICAL UI ERROR CAUGHT BY BOUNDARY: Error: FALHA INJETADA PELO TESTE (harness) — valor sentinela 777,77\n    at NumberFormat.value (<anonymous>:7:108)\n    at formatMoney (http://localhost:3000/src/do"
+   }
+  ]
+ }
+}
