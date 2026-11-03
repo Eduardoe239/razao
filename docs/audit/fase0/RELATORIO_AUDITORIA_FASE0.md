@@ -5,6 +5,8 @@
 **Modo:** somente leitura sobre o código. Nenhum arquivo rastreado foi alterado; nenhum commit, push, pull, reset, checkout, merge ou migração foi executado.
 **Situação da Fase 0:** **ABERTA** — diagnóstico entregue; aguarda avaliação do proprietário. Há itens não verificáveis neste ambiente (ver §12.2).
 
+> **Atualização 02/11/2026 (Incremento 0.1, executado no notebook do proprietário):** a identidade do notebook e o hash do ZIP beta.20 foram **verificados** e `npm test` foi executado no notebook (exit 0). Ver §2.3 e `evidencias/notebook-verificacao.txt`. Pendências remanescentes do gate: validação visual/manual pelo proprietário e aprovação formal (ver `docs/PROJECT_STATUS.md`). As seções originais abaixo foram mantidas como registro histórico; onde a atualização as supera, isso está indicado.
+
 Convenção: **[FATO]** = verificado por código, comando ou execução; **[HIPÓTESE]** = inferência ainda não comprovada; **[RECOMENDAÇÃO]** = proposta técnica sujeita a aprovação.
 
 ---
@@ -83,7 +85,19 @@ Carregada e utilizada nesta fase: **`razao-baseline-audit`** (contrato da Fase 0
 ### 2.2 Possíveis perdas/regressões
 - Nenhuma perda detectada entre `e6f2f17` e `f011bcf` (o merge apenas adicionou 2 arquivos).
 - A linha antiga (`0fcd406`, "12.0.0") é **anterior e inferior**; o merge corretamente priorizou a beta local. Seus artefatos residuais (`main.js`/`preload.js`) devem ser removidos (ver SEC-01).
-- **Risco não verificável:** se o notebook tiver commits/alterações posteriores a 29/10, o GitHub está desatualizado.
+- **Risco não verificável:** se o notebook tiver commits/alterações posteriores a 29/10, o GitHub está desatualizado. → **Superado em §2.3: não há.**
+
+### 2.3 Verificação no notebook (Incremento 0.1, 02/11/2026) — [FATO]
+| Item | Resultado |
+|---|---|
+| Ambiente | Windows 11 Pro 10.0.26300, Node `v24.19.0`, npm `11.17.0`, `core.autocrlf=true` |
+| Branch / commit | `claude/upbeat-feynman-4m2y0k` @ `f59a67e` = origin; `main` @ `f011bcf` = `origin/main` |
+| Árvore de trabalho | limpa; sem stash |
+| ZIP beta.20 (`Desktop\razao-v1.22.0-beta.20-redesign-ui-ux.zip`) | SHA-256 `b3f897efe047ccd6986c9b9599284de6eef4fc7ad30f4242aa82c0dcecb29b41` — **coincide** com o Plano §7 |
+| ZIP × árvore de trabalho (`diff -rq --strip-trailing-cr`) | **conteúdo idêntico** exceto: no repositório, `package-lock.json`, `electron/main.js`, `electron/preload.js`, `dir`, `type` e a documentação do Plano/auditoria; no ZIP, os diretórios **vazios** `api/src/controllers/` e `api/src/lib/` (não versionáveis pelo Git). Diferenças restantes são apenas CRLF |
+| `npm test` no notebook | **exit 0**, todos os scripts com 0 falhas — `evidencias/npm-test-notebook-windows.log` |
+
+**Conclusão:** a [HIPÓTESE forte] de §2.1 passa a **[FATO]**: o código em `f011bcf`/`f59a67e` é a beta.20 de referência + lockfile + 4 arquivos residuais do merge. Não existe versão posterior à beta.20 no notebook. A base oficial recomendada em §3 está confirmada (sujeita à aprovação do proprietário); o item 1 e o item 2 das condições de §3 estão cumpridos. O item 3 (remoção dos residuais) permanece para a beta.21.
 
 ---
 
@@ -324,8 +338,9 @@ Script: `evidencias/smoke.cjs` · resultado: `evidencias/e2e-smoke-resultado.jso
 FIN-01, FIN-02, FIN-03, FIN-04, FUN-01, FUN-02, FUN-03, FUN-04, SEC-01 (presença), DATA-04, EST-05, QA-01 — todas com evidência reproduzível acima.
 
 ### 12.2 Não verificado nesta sessão
-- **Estado do notebook** (branch, commits, alterações locais, testes) — sem acesso.
-- **Hash do ZIP beta.20** — arquivo não fornecido.
+- ~~**Estado do notebook** (branch, commits, alterações locais, testes) — sem acesso.~~ **Verificado em 02/11/2026 (§2.3).**
+- ~~**Hash do ZIP beta.20** — arquivo não fornecido.~~ **Verificado em 02/11/2026 (§2.3).**
+- **Validação visual/manual da beta.20 no notebook** — pendente do proprietário (`CHECKLIST_VALIDACAO_VISUAL_BETA.20.md`, somente dados fictícios).
 - Execução Electron em Windows real; `safeStorage`; instalador.
 - Acessibilidade (axe, NVDA, teclado completo, zoom 200%), breakpoints 390/768/1024/1440.
 - Performance com 10k/50k/100k lançamentos e limite de quota do `localStorage`.
@@ -398,7 +413,9 @@ Nenhuma implementação será iniciada sem autorização explícita do propriet�
 ## Anexo A — Evidências (`docs/audit/fase0/evidencias/`)
 | Arquivo | Conteúdo |
 |---|---|
-| `npm-test.log` | saída integral de `npm test` |
+| `npm-test.log` | saída integral de `npm test` (container de nuvem, Node 22) |
+| `npm-test-notebook-windows.log` | saída integral de `npm test` no notebook (Windows 11, Node 24.19.0), exit 0 |
+| `notebook-verificacao.txt` | estado Git, hash e comparação do ZIP beta.20 com a árvore do notebook |
 | `npm-ci.log`, `npm-audit.txt`, `vite-build.log` | reprodutibilidade, SCA e build |
 | `probe-import.mjs`, `probe-import-resultado.txt` | sonda dos parsers (dados sintéticos) |
 | `smoke.cjs`, `e2e-smoke-resultado.json`, `01…05.png` | smoke E2E Chromium (dados fictícios) |

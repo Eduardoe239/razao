@@ -1,0 +1,36 @@
+Verificação do notebook — Incremento 0.1 (somente leitura sobre o código)
+Data: 2026-11-02 (horário local do notebook)
+Ambiente: Windows 11 Pro 10.0.26300, Node v24.19.0, npm 11.17.0, Git core.autocrlf=true
+Caminho do repositório: C:\Users\<usuario>\Desktop\razao
+
+== Git ==
+Branch atual: claude/upbeat-feynman-4m2y0k @ f59a67ed27bc89029116e69db174babe4495f1c0 (= origin/claude/upbeat-feynman-4m2y0k)
+main local: f011bcf (= origin/main)
+git status --short: (vazio — árvore limpa)
+git stash list: (vazio)
+git diff --stat f011bcf HEAD: 23 arquivos, +4532, somente documentação (commit f59a67e)
+
+== ZIP de referência beta.20 ==
+Arquivo: Desktop\razao-v1.22.0-beta.20-redesign-ui-ux.zip
+SHA-256: b3f897efe047ccd6986c9b9599284de6eef4fc7ad30f4242aa82c0dcecb29b41  (coincide com o valor esperado pelo Plano Mestre §7)
+Extraído em diretório temporário isolado; comparado com a árvore de trabalho por
+  diff -rq --strip-trailing-cr --exclude=node_modules --exclude=.git <zip> <repo>
+Resultado (todas as diferenças restantes):
+  Somente no repositório: CLAUDE.md, PLANO_MESTRE_O_RAZAO_V2.0.md, docs/, package-lock.json,
+                          electron/main.js, electron/preload.js, dir, type
+  Somente no ZIP:         api/src/controllers/ e api/src/lib/ (diretórios VAZIOS; Git não versiona diretórios vazios)
+Sem --strip-trailing-cr todos os arquivos de texto diferem apenas por CRLF (checkout com autocrlf=true).
+Conclusão: o código do notebook é a beta.20 de referência (conteúdo idêntico, módulo CRLF),
+acrescida do lockfile e dos 4 arquivos residuais do merge f011bcf. Não há versão posterior à beta.20 no notebook.
+
+== Hashes ==
+Blob Git de package.json @HEAD: 86bab5a52f510d7f07d6974a4145e42cb525aaa5a92ecc3903a1ea7b85c85e7d (igual ao Anexo B do relatório)
+Arquivos na árvore de trabalho têm SHA-256 diferente do Anexo B apenas por CRLF.
+
+== npm test ==
+Comando: npm test (sem instalar dependências; node_modules ausente)
+Exit code: 0
+Log redigido: npm-test-notebook-windows.log (todos os scripts com 0 falhas)
+
+== Não verificado neste incremento ==
+Execução do aplicativo (Web/Electron) no notebook; validação visual/manual; safeStorage no Windows.

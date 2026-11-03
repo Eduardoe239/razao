@@ -1,19 +1,26 @@
 # O Razão — controle financeiro pessoal
 
-**Versão:** `1.22.0-beta.18`  
-**Estado:** desenvolvimento e auditoria da Fase 0. Não é uma versão certificada para produção.
+**Versão:** `1.22.0-beta.20`  
+**Estado:** desenvolvimento; **Fase 0 (auditoria e baseline) aberta**. Não é uma versão certificada para produção.
 
 O Razão é um aplicativo local-first para organizar contas, lançamentos, cartões e faturas, limites de orçamento, recorrências, importações e conciliação. Esta distribuição prioriza consistência dos dados e recuperação; as jornadas reais e a revisão visual no ambiente do usuário ainda fazem parte da validação da Fase 0.
 
-## O que está disponível nesta base
+**Norma do projeto:** [`PLANO_MESTRE_O_RAZAO_V2.0.md`](./PLANO_MESTRE_O_RAZAO_V2.0.md) e [`CLAUDE.md`](./CLAUDE.md). **Estado atual:** [`docs/PROJECT_STATUS.md`](./docs/PROJECT_STATUS.md).
 
-- Painel financeiro e histórico de lançamentos com filtros e exportação CSV.
-- Contas, categorias, perfis PF/PJ e isolamento por perfil em fluxos cobertos pelos testes.
-- Cartões, ciclos de fatura e registro local de pagamentos.
-- Limites de orçamento, cenários/projeções locais e compromissos recorrentes.
-- Importação de arquivos compatíveis, revisão manual de correspondências e conciliação.
+## O que existe nesta base (estado verificado na auditoria da Fase 0)
+
+Nenhuma capacidade está classificada como produtiva e validada. Detalhes e evidências em [`docs/audit/BASELINE_AS_BUILT.md`](./docs/audit/BASELINE_AS_BUILT.md).
+
+- Painel financeiro e histórico de lançamentos (receita/despesa) com criar, editar, excluir, filtros e exportação CSV.
+- Perfis PF/PJ por **filtro de exibição** sobre um único estado local; ainda **não há workspaces isolados**.
+- Contas e saldo derivado no domínio; **não há tela para criar, editar ou arquivar contas** (o estado inicial traz uma conta PF e uma PJ).
+- Ciclos de fatura e pagamento no domínio; **não há tela para cadastrar cartão nem lançar compra no cartão**.
+- Transferências suportadas no domínio; **sem tela para criá-las**.
+- Limites de orçamento mensais, recorrências mensais e lista de próximos compromissos.
+- Importação CSV/OFX com revisão e conciliação — **com defeitos conhecidos de conversão de valores e de identificação de linhas; não use com extratos reais** (ver [`docs/risks/RISK_REGISTER.md`](./docs/risks/RISK_REGISTER.md), FIN-01 a FIN-04).
 - Backup JSON com checksum para detectar corrupção acidental, validação antes da restauração, histórico local de cópias e fluxos de recuperação.
-- Histórico de auditoria local e diagnóstico de integridade.
+- Histórico de auditoria local (limitado a 500 eventos) e diagnóstico de integridade.
+- Previsões e cenários por heurísticas fixas; não são probabilidades calibradas.
 
 O cálculo local não realiza movimentações bancárias. Confira os dados e as propostas antes de aplicar alterações financeiras.
 
@@ -32,24 +39,35 @@ O cálculo local não realiza movimentações bancárias. Confira os dados e as 
 
 ## Requisitos e execução de desenvolvimento
 
-- Node.js compatível com os scripts ES modules do projeto.
-- Dependências listadas em `package.json`.
+- Node.js `>=22.12.0` (`engines` em `package.json`); verificado com Node 22.23.4 e 24.19.0.
+- Dependências fixadas em `package.json` e `package-lock.json`.
 
-Depois de extrair o ZIP em uma pasta local:
+No diretório do repositório:
 
 ```bash
-npm install
+npm ci
 npm test
 npm run dev
 ```
 
-Abra o endereço local informado pelo Vite: `http://127.0.0.1:3000`. No modo Electron de desenvolvimento, o renderer usa `http://127.0.0.1:5173` e o processo principal armazena seus dados em `.razao-desktop-test-profile/RazaoData`, um perfil isolado que não utiliza os dados do aplicativo instalado. Mantenha o terminal aberto enquanto testa. Use somente dados fictícios durante a validação. A instalação de dependências pode criar arquivos locais que não fazem parte do ZIP original. O histórico da execução automatizada está em `evidence/npm-test-beta18.log`; o registro estático está em `evidence/VALIDACAO_ESTATICA_BETA.18.txt`.
+Abra o endereço local informado pelo Vite: `http://127.0.0.1:3000`. No modo Electron de desenvolvimento, o renderer usa `http://127.0.0.1:5173` e o processo principal armazena seus dados em `.razao-desktop-test-profile/RazaoData`, um perfil isolado que não utiliza os dados do aplicativo instalado. Mantenha o terminal aberto enquanto testa. Use somente dados fictícios durante a validação. Os logs de `npm test` da beta.20 estão em [`docs/audit/fase0/evidencias/`](./docs/audit/fase0/evidencias/) (`npm-test-notebook-windows.log` e `npm-test.log`); `evidence/` guarda o histórico da beta.18.
 
-O comando de testes atual é automatizado e combina testes de domínio, validação de payload, persistência simulada, migração, backup/restore e verificações estáticas. Os resultados precisam ser conferidos no relatório da versão.
+O comando de testes atual é automatizado e combina testes de domínio, validação de payload, persistência simulada, migração, backup/restore e verificações estáticas. Parte dos scripts é apenas estática (verifica o código-fonte, não o comportamento) e três testes de domínio ainda não fazem parte do runner; ver o relatório da Fase 0, §10–§11.
 
 **Não execute `npm run build`, `desktop:build` nem o instalador nesta fase.** O Plano Mestre reserva build/instalador para a etapa de empacotamento, após a aprovação dos gates anteriores.
 
 ## Plano Mestre e evidências da Fase 0
+
+Documentos vigentes (beta.20, Plano Mestre V2.0):
+
+- [`docs/audit/fase0/RELATORIO_AUDITORIA_FASE0.md`](./docs/audit/fase0/RELATORIO_AUDITORIA_FASE0.md) — auditoria as-built, achados e evidências.
+- [`docs/audit/BASELINE_AS_BUILT.md`](./docs/audit/BASELINE_AS_BUILT.md) — telas, persistência, matriz PF/PJ.
+- [`docs/architecture/CONTEXT_MAP.md`](./docs/architecture/CONTEXT_MAP.md) — mapa de contexto e módulos.
+- [`docs/risks/RISK_REGISTER.md`](./docs/risks/RISK_REGISTER.md) — riscos P0–P3.
+- [`docs/adr/`](./docs/adr/) — decisões arquiteturais (ADR-001 a 003, todas `PROPOSED`).
+- [`CHANGELOG_O_RAZAO_V1.22.0_BETA.20_UI_UX.md`](./CHANGELOG_O_RAZAO_V1.22.0_BETA.20_UI_UX.md) e [`CHECKLIST_VALIDACAO_VISUAL_BETA.20.md`](./CHECKLIST_VALIDACAO_VISUAL_BETA.20.md) — alterações da beta.20 e roteiro de validação visual.
+
+Registros históricos da beta.18 (superados nos pontos em que divergem dos documentos acima):
 
 - [`AUDITORIA_FASE0_ATUALIZADA_BETA.18.md`](./AUDITORIA_FASE0_ATUALIZADA_BETA.18.md) — estado de cada critério, riscos e comparação com o Plano Mestre.
 - [`FASE0_INVENTARIO_TELAS_PERSISTENCIA_BETA.18.md`](./FASE0_INVENTARIO_TELAS_PERSISTENCIA_BETA.18.md) — inventário estático de telas, estados e fontes de persistência.
@@ -72,4 +90,4 @@ O comando de testes atual é automatizado e combina testes de domínio, validaç
 
 ## Status da Fase 0
 
-A Fase 0 **permanece aberta até que todos os critérios de saída do Plano Mestre estejam demonstrados**. Testes automatizados aprovados não substituem revisão visual de telas, jornadas reais Web/Electron, testes de falha/quota, verificação independente de segurança, fechamento de riscos S0/S1 e aprovações dos gates G1–G9.
+A Fase 0 **permanece aberta até que todos os critérios de saída do Plano Mestre estejam demonstrados** (situação de cada critério em [`docs/PROJECT_STATUS.md`](./docs/PROJECT_STATUS.md)). Testes automatizados aprovados não substituem revisão visual de telas, jornadas reais Web/Electron, testes de falha/quota, verificação independente de segurança, fechamento de riscos S0/S1 e aprovações dos gates G1–G9.
