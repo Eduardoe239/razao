@@ -1,0 +1,14 @@
+# Normaliza quebras de linha: LF no repositório, conversão automática no checkout.
+* text=auto
+
+# Binários: nunca converter.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.docx binary
+*.zip binary
+*.woff binary
+*.woff2 binary
