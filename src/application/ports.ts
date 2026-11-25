@@ -56,6 +56,8 @@ export interface SessionPort {
   workspaceIds(): Promise<string[]>;
   load(workspaceId: string): Promise<WorkspaceSnapshot>;
   commit(workspaceId: string, op: WorkspaceCommit): Promise<'gravada' | 'repetida'>;
+  /** COF-007: apaga tudo o que é do espaço, inclusive dos snapshots. Não tem volta. */
+  deleteWorkspace(workspaceId: string): Promise<void>;
   /** Há registro em quarentena ou trilha quebrada: leitura sim, gravação não (BKP-006). */
   readonly safeMode: boolean;
   issues(): readonly StorageIssue[];

@@ -53,6 +53,16 @@ export function App() {
   }, [bloquear]);
   useAutoLock(aberto !== null, porInatividade);
 
+  /** Relê a lista de espaços depois de criar, arquivar ou excluir um deles. */
+  const recarregar = useCallback(async (session: VaultSession) => {
+    try {
+      const ws = await session.workspaces();
+      setFase((f) => (f.t === 'aberto' && f.session === session ? { ...f, workspaces: ws } : f));
+    } catch (erro) {
+      setFase({ t: 'erro', msg: messageFor(erro) });
+    }
+  }, []);
+
   const abrir = useCallback(async (session: VaultSession) => {
     try {
       setFase({ t: 'aberto', session, workspaces: await session.workspaces() });
@@ -125,6 +135,7 @@ export function App() {
           onLock={() => {
             bloquear();
           }}
+          onWorkspacesChanged={() => recarregar(fase.session)}
         />
       );
   }

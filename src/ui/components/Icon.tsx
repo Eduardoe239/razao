@@ -22,6 +22,12 @@ const PATHS = {
   eye: 'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
   eyeOff:
     'M3 3l18 18M10.6 5.1A10.8 10.8 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4M6.6 6.6C3.8 8.4 2 12 2 12s3.6 7 10 7c1.6 0 3-.4 4.3-1M9.9 9.9a3 3 0 0 0 4.2 4.2',
+  close: 'M6 6l12 12M18 6L6 18',
+  sliders: 'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M14 4v4M8 10v4M16 16v4',
+  transfer: 'M4 8h15l-4-4M20 16H5l4 4',
+  edit: 'M4 20h4L19 9l-4-4L4 16zM13 7l4 4',
+  archive: 'M3 4h18v4H3zM5 8v12h14V8M10 12h4',
+  trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
 } as const;
 
 export type IconName = keyof typeof PATHS;

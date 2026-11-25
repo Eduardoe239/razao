@@ -1,9 +1,13 @@
 // Conteúdo das sub-abas. Na I-05a existem de verdade a Visão geral e as Contas; as outras dizem com
 // honestidade que ainda não estão disponíveis, sem dado fictício (Volume 09: nada de demonstração como pronto).
+import { useState } from 'react';
 import { formatDate } from '@/application/format';
-import type { AccountView, WorkspaceView } from '@/application/session';
+import type { AccountView, VaultSession, WorkspaceView } from '@/application/session';
 import { ACCOUNT_KIND_LABELS } from '@/application/model';
+import { AccountSheet } from '../accounts/AccountSheet';
+import { NewAccountForm, TransferForm } from '../accounts/AccountForms';
 import { Amount, Badge, Button, EmptyState, StatCard } from '../components/ds';
+import { Sheet } from '../components/Sheet';
 import type { Route } from './nav';
 import { areaOf } from './nav';
 
@@ -12,21 +16,51 @@ function iniciais(nome: string): string {
   return ((partes[0]?.[0] ?? '') + (partes[1]?.[0] ?? partes[0]?.[1] ?? '')).toUpperCase();
 }
 
-function AccountList({ accounts }: { accounts: readonly AccountView[] }) {
+function AccountRow({ item }: { item: AccountView }) {
+  const { account, balance } = item;
   return (
-    <ul className="rz-list" aria-label="Contas" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-      {accounts.map(({ account, balance }) => (
-        <li key={account.id} className="rz-tx">
-          <span className="rz-tx-icon" aria-hidden="true">
-            {iniciais(account.name)}
-          </span>
-          <div>
-            <div className="rz-tx-title">{account.name}</div>
-            <div className="rz-tx-meta">{ACCOUNT_KIND_LABELS[account.kind]}</div>
-          </div>
-          <div className="rz-tx-right">
-            <Amount cents={balance} kind="balance" />
-          </div>
+    <div className="rz-tx">
+      <span className="rz-tx-icon" aria-hidden="true">
+        {iniciais(account.name)}
+      </span>
+      <div>
+        <div className="rz-tx-title">{account.name}</div>
+        <div className="rz-tx-meta">{ACCOUNT_KIND_LABELS[account.kind]}</div>
+      </div>
+      <div className="rz-tx-right">
+        <Amount cents={balance} kind="balance" />
+      </div>
+    </div>
+  );
+}
+
+function AccountList({
+  accounts,
+  onSelect,
+  label = 'Contas',
+}: {
+  accounts: readonly AccountView[];
+  onSelect?: (a: AccountView) => void;
+  label?: string;
+}) {
+  return (
+    <ul className="rz-list" aria-label={label} style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+      {accounts.map((item) => (
+        <li key={item.account.id}>
+          {onSelect ? (
+            <button
+              type="button"
+              className="rz-row-btn"
+              aria-label={`${item.account.name}: abrir detalhes`}
+              onClick={() => {
+                onSelect(item);
+              }}
+            >
+              <AccountRow item={item} />
+            </button>
+          ) : (
+            <AccountRow item={item} />
+          )}
         </li>
       ))}
     </ul>
@@ -89,26 +123,98 @@ function Inicio({ view, navigate }: { view: WorkspaceView; navigate: (r: Route) 
   );
 }
 
-function Contas({ view }: { view: WorkspaceView }) {
+type Painel = { t: 'nova' } | { t: 'transferir' } | { t: 'conta'; id: string } | null;
+
+function Contas({
+  session,
+  view,
+  onChanged,
+}: {
+  session: VaultSession;
+  view: WorkspaceView;
+  onChanged: (m: string) => void;
+}) {
+  const [painel, setPainel] = useState<Painel>(null);
   const ativas = view.accounts.filter((a) => !a.account.archived);
-  if (!ativas.length) {
-    return (
-      <div className="rz-card rz-enter">
-        <EmptyState
-          title="Nenhuma conta neste espaço"
-          text="As contas deste espaço aparecem aqui, com o saldo de cada uma."
-        />
-      </div>
-    );
-  }
+  const arquivadas = view.accounts.filter((a) => a.account.archived);
+  const fechar = () => {
+    setPainel(null);
+  };
+  const feito = (m: string) => {
+    setPainel(null);
+    onChanged(m);
+  };
+  const selecionada =
+    painel?.t === 'conta' ? view.accounts.find((a) => a.account.id === painel.id) : undefined;
   return (
     <div className="rz-blocks rz-enter">
-      <StatCard
-        label="Total em contas"
-        cents={view.total}
-        foot={`${contasTexto(ativas.length)} · até hoje, ${formatDate(view.asOf)}`}
-      />
-      <AccountList accounts={ativas} />
+      <div className="rz-actions">
+        <Button
+          variant="primary"
+          icon="plus"
+          onClick={() => {
+            setPainel({ t: 'nova' });
+          }}
+        >
+          Nova conta
+        </Button>
+        <Button
+          icon="transfer"
+          disabled={ativas.length < 2}
+          onClick={() => {
+            setPainel({ t: 'transferir' });
+          }}
+        >
+          Transferir
+        </Button>
+      </div>
+      {ativas.length ? (
+        <>
+          <StatCard
+            label="Total em contas"
+            cents={view.total}
+            foot={`${contasTexto(ativas.length)} · até hoje, ${formatDate(view.asOf)}`}
+          />
+          <AccountList
+            accounts={ativas}
+            onSelect={(a) => {
+              setPainel({ t: 'conta', id: a.account.id });
+            }}
+          />
+        </>
+      ) : (
+        <div className="rz-card">
+          <EmptyState
+            title="Nenhuma conta neste espaço"
+            text="Crie uma conta para acompanhar o saldo dela aqui."
+          />
+        </div>
+      )}
+      {arquivadas.length ? (
+        <details className="rz-archived">
+          <summary>Arquivadas ({arquivadas.length})</summary>
+          <AccountList
+            label="Contas arquivadas"
+            accounts={arquivadas}
+            onSelect={(a) => {
+              setPainel({ t: 'conta', id: a.account.id });
+            }}
+          />
+        </details>
+      ) : null}
+      {painel?.t === 'nova' ? (
+        <Sheet title="Nova conta" onClose={fechar}>
+          <NewAccountForm session={session} view={view} onDone={feito} />
+        </Sheet>
+      ) : null}
+      {painel?.t === 'transferir' ? (
+        <Sheet title="Transferir" onClose={fechar}>
+          <TransferForm session={session} view={view} onDone={feito} />
+        </Sheet>
+      ) : null}
+      {selecionada ? (
+        <AccountSheet session={session} view={view} item={selecionada} onClose={fechar} onDone={feito} />
+      ) : null}
     </div>
   );
 }
@@ -117,14 +223,19 @@ export function PageBody({
   route,
   view,
   navigate,
+  session,
+  onChanged,
 }: {
   route: Route;
   view: WorkspaceView;
   navigate: (r: Route) => void;
+  session: VaultSession;
+  onChanged: (m: string) => void;
 }) {
   if (route.area === 'inicio' && route.sub === 'visao-geral')
     return <Inicio view={view} navigate={navigate} />;
-  if (route.area === 'contas' && route.sub === 'contas') return <Contas view={view} />;
+  if (route.area === 'contas' && route.sub === 'contas')
+    return <Contas session={session} view={view} onChanged={onChanged} />;
   const area = areaOf(route.area);
   const sub = area.subs(view.workspace.kind).find((s) => s.id === route.sub)?.label ?? area.label;
   return (

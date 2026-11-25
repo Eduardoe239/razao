@@ -6,31 +6,37 @@ import type { Workspace } from '@/application/model';
 import type { VaultSession, WorkspaceView } from '@/application/session';
 import { Alert, Badge, Button } from '../components/ds';
 import { Icon } from '../components/Icon';
+import { Toast } from '../components/Sheet';
 import { Tabs, WorkspaceSwitch } from '../components/Tabs';
+import { Espacos } from './Espacos';
 import type { Route } from './nav';
-import { AREAS, areaOf, parseRoute, routeHash } from './nav';
+import { CONFIG, areaOf, parseRoute, routeHash } from './nav';
 import { PageBody } from './Pages';
+import { SideNav } from './SideNav';
 
 type Carga = { t: 'carregando' } | { t: 'ok'; view: WorkspaceView } | { t: 'erro'; msg: string };
 
-export function Shell({
-  session,
-  workspaces,
-  onLock,
-}: {
+export function Shell(p: {
   session: VaultSession;
   workspaces: readonly Workspace[];
   onLock: () => void;
+  onWorkspacesChanged: () => Promise<void>;
 }) {
-  const [wsId, setWsId] = useState(() => workspaces[0]?.id ?? '');
-  const ws = workspaces.find((w) => w.id === wsId) ?? workspaces[0];
+  const { session, workspaces, onLock, onWorkspacesChanged } = p;
+  // Só espaços ativos entram no seletor; os arquivados ficam em Espaços (COF-007).
+  const ativos = workspaces.filter((w) => !w.archived);
+  const [escolhido, setEscolhido] = useState(() => ativos[0]?.id ?? '');
+  const ws = ativos.find((w) => w.id === escolhido) ?? ativos[0];
+  const wsId = ws?.id ?? '';
   const kind = ws?.kind ?? 'PF';
   const [rota, setRota] = useState<Route>(() => parseRoute(window.location.hash, kind));
   const [carga, setCarga] = useState<Carga>({ t: 'carregando' });
   const [versao, setVersao] = useState(0);
+  const [aviso, setAviso] = useState<string | null>(null);
   const titulo = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
+    if (!wsId) return;
     let vivo = true;
     session.view(wsId).then(
       (view) => {
@@ -62,25 +68,39 @@ export function Shell({
     window.requestAnimationFrame(() => titulo.current?.focus());
   }, []);
 
+  /** Depois de gravar: aviso, releitura do espaço e da lista de espaços. */
+  const mudou = useCallback(
+    (m: string) => {
+      setAviso(m);
+      setVersao((v) => v + 1);
+      void onWorkspacesChanged();
+    },
+    [onWorkspacesChanged],
+  );
+  const semAviso = useCallback(() => {
+    setAviso(null);
+  }, []);
+
   const trocarEspaco = (id: string) => {
-    const novo = workspaces.find((w) => w.id === id);
+    const novo = ativos.find((w) => w.id === id);
     if (!novo) return;
     setCarga({ t: 'carregando' });
-    setWsId(id);
+    setEscolhido(id);
     // Sub-aba que não existe no outro tipo de espaço volta para a primeira da área.
     navegar(parseRoute(routeHash(rota), novo.kind));
   };
 
+  const config = rota.area === 'config';
   const area = areaOf(rota.area);
-  const subs = area.subs(kind);
+  const subs = config ? [] : area.subs(kind);
   const tom = kind === 'PJ' ? 'pj' : 'pf';
-  const opcoes = workspaces.map((w) => ({
+  const opcoes = ativos.map((w) => ({
     id: w.id,
     label: w.kind === 'PF' ? 'Pessoal' : 'Negócio',
     tone: w.kind === 'PJ' ? ('pj' as const) : ('pf' as const),
   }));
   const seletor =
-    workspaces.length > 1 ? (
+    ativos.length > 1 ? (
       <WorkspaceSwitch options={opcoes} value={wsId} onChange={trocarEspaco} />
     ) : (
       <span className="rz-space-tag">
@@ -88,61 +108,11 @@ export function Shell({
         <span>{kind === 'PF' ? 'Pessoal' : 'Negócio'}</span>
       </span>
     );
+  const visivel = carga.t === 'ok' && carga.view.workspace.id === wsId ? carga.view : null;
 
   return (
     <div className="rz-shell" data-space={tom}>
-      <aside className="rz-side" aria-label="Navegação principal">
-        <div className="rz-brand">
-          <img src="/favicon.png" alt="" width={28} height={28} />O Razão
-        </div>
-        {seletor}
-        <nav className="rz-nav">
-          {AREAS.map((a) => {
-            const aberta = a.id === rota.area;
-            return (
-              <div key={a.id}>
-                <button
-                  type="button"
-                  className="rz-nav-item"
-                  aria-expanded={aberta}
-                  onClick={() => {
-                    if (!aberta) navegar({ area: a.id, sub: a.subs(kind)[0]?.id ?? '' });
-                  }}
-                >
-                  <Icon name={a.icon} />
-                  {a.label}
-                  <span className="rz-nav-chev">
-                    <Icon name="chevron" size={16} />
-                  </span>
-                </button>
-                <div className="rz-nav-subs" data-open={aberta}>
-                  <div>
-                    {a.subs(kind).map((s) => (
-                      <button
-                        key={s.id}
-                        type="button"
-                        className="rz-nav-sub"
-                        tabIndex={aberta ? 0 : -1}
-                        aria-current={aberta && s.id === rota.sub ? 'page' : undefined}
-                        onClick={() => {
-                          navegar({ area: a.id, sub: s.id });
-                        }}
-                      >
-                        {s.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </nav>
-        <div className="rz-side-foot">
-          <Button variant="ghost" icon="lock" block onClick={onLock}>
-            Bloquear o cofre
-          </Button>
-        </div>
-      </aside>
+      <SideNav kind={kind} route={rota} seletor={seletor} navigate={navegar} onLock={onLock} />
 
       <div className="rz-mainwrap">
         <header className="rz-top">
@@ -155,6 +125,15 @@ export function Shell({
           <Button
             variant="ghost"
             className="rz-icon-btn rz-only-mobile"
+            aria-label="Espaços"
+            icon="sliders"
+            onClick={() => {
+              navegar(CONFIG);
+            }}
+          />
+          <Button
+            variant="ghost"
+            className="rz-icon-btn rz-only-mobile"
             aria-label="Bloquear o cofre"
             icon="lock"
             onClick={onLock}
@@ -164,9 +143,9 @@ export function Shell({
         <main className="rz-page" key={`${wsId}/${rota.area}/${rota.sub}`}>
           <div className="rz-page-head rz-enter">
             <h1 ref={titulo} tabIndex={-1} className="rz-page-title">
-              {area.label}
+              {config ? 'Espaços' : area.label}
             </h1>
-            <p className="rz-page-q">{area.question}</p>
+            <p className="rz-page-q">{config ? 'Pessoal e negócio neste aparelho' : area.question}</p>
           </div>
           {subs.length > 1 ? (
             <div className="rz-mobile-tabs">
@@ -186,10 +165,11 @@ export function Shell({
               gravações ficam bloqueadas até a recuperação.
             </Alert>
           ) : null}
-          {carga.t === 'carregando' ? (
+          {config ? <Espacos session={session} workspaces={workspaces} onChanged={mudou} /> : null}
+          {!config && carga.t === 'carregando' ? (
             <div className="rz-card" aria-busy="true" aria-label="Carregando" style={{ minHeight: 160 }} />
           ) : null}
-          {carga.t === 'erro' ? (
+          {!config && carga.t === 'erro' ? (
             <Alert tone="negative" title="Não foi possível ler este espaço">
               {carga.msg}{' '}
               <Button
@@ -203,8 +183,8 @@ export function Shell({
               </Button>
             </Alert>
           ) : null}
-          {carga.t === 'ok' && carga.view.workspace.id === wsId ? (
-            <PageBody route={rota} view={carga.view} navigate={navegar} />
+          {!config && visivel ? (
+            <PageBody route={rota} view={visivel} navigate={navegar} session={session} onChanged={mudou} />
           ) : null}
         </main>
 
@@ -237,6 +217,7 @@ export function Shell({
           )}
         </nav>
       </div>
+      <Toast message={aviso} onDone={semAviso} />
     </div>
   );
 }

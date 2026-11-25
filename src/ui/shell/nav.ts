@@ -5,6 +5,9 @@ import type { TabItem } from '../components/Tabs';
 
 export type AreaId = 'inicio' | 'lancamentos' | 'contas' | 'planejamento' | 'ia';
 
+/** Telas fora das 5 áreas, abertas pelo canto superior (Volume 02, seção 6). */
+export type ExtraId = 'config';
+
 export interface Area {
   readonly id: AreaId;
   readonly label: string;
@@ -83,19 +86,22 @@ export const AREAS: readonly Area[] = [
 ];
 
 export interface Route {
-  readonly area: AreaId;
+  readonly area: AreaId | ExtraId;
   readonly sub: string;
 }
 
 export const HOME: Route = { area: 'inicio', sub: 'visao-geral' };
 
-export function areaOf(id: AreaId): Area {
+export const CONFIG: Route = { area: 'config', sub: 'espacos' };
+
+export function areaOf(id: AreaId | ExtraId): Area {
   return AREAS.find((a) => a.id === id) ?? (AREAS[0] as Area);
 }
 
 /** Lê "#/contas/contas". Rota desconhecida ou que não existe no tipo de espaço volta para o Início. */
 export function parseRoute(hash: string, kind: WorkspaceKind): Route {
   const [, area, sub] = hash.replace(/^#/, '').split('/');
+  if (area === 'config') return CONFIG;
   const a = AREAS.find((x) => x.id === area);
   if (!a) return HOME;
   const subs = a.subs(kind);

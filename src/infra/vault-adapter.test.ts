@@ -1,41 +1,11 @@
 // Integração da aplicação com o cofre real (IndexedDB simulado): do cofre novo ao saldo, com dados sintéticos.
 import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
-import { createRazaoApp } from '@/application/app';
 import { AppError } from '@/application/errors';
-import type { Clock } from '@/application/ports';
-import { parseCivilDate } from '@/domain/civil-date';
 import { newArgon2Params } from './crypto/kdf';
-import { uuidv7 } from './ids';
 import { VAULT_MARKER_KEY } from './storage/vault-store';
+import { montar, proximo } from './test-helpers';
 import { createVaultPort } from './vault-adapter';
-
-let n = 0;
-
-function montar(local = new Map<string, string>(), dbName = `razao-app-${String(++n)}`) {
-  let ms = Date.UTC(2027, 2, 10, 12, 0, 0);
-  const clock: Clock = {
-    nowIso: () => new Date(ms).toISOString(),
-    nowMs: () => ms,
-    monotonicMs: () => ms,
-    today: () => parseCivilDate('2027-03-10'),
-    deviceTimeZone: () => 'America/Fortaleza',
-  };
-  const kv = {
-    getItem: (k: string) => local.get(k) ?? null,
-    setItem: (k: string, v: string) => local.set(k, v),
-  };
-  const vault = createVaultPort({
-    dbName,
-    local: kv,
-    nowIso: () => clock.nowIso(),
-    nowMs: () => clock.nowMs(),
-    kdf: { kdf: () => newArgon2Params({ memoryKiB: 256 }) },
-  });
-  let seq = 0;
-  const app = createRazaoApp({ vault, clock, ids: { newId: () => uuidv7(ms + seq++) } });
-  return { app, vault, local, dbName, avancar: (s: number) => (ms += s * 1000) };
-}
 
 async function cofreComContas() {
   const m = montar();
@@ -193,7 +163,7 @@ describe('cofre e espaços pela aplicação', () => {
       setItem: (k: string, v: string) => local.set(k, v),
     };
     const vault = createVaultPort({
-      dbName: `razao-persist-${String(++n)}`,
+      dbName: `razao-persist-${String(proximo())}`,
       local: kv,
       storage,
       nowIso: () => '2027-03-10T12:00:00.000Z',

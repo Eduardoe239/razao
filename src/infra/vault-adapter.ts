@@ -22,6 +22,7 @@ import type { Db } from './storage/db';
 import { DB_NAME, openRazaoDb } from './storage/db';
 import { StorageError } from './storage/errors';
 import { runMigrations } from './storage/migrations';
+import { deleteWorkspaceData } from './storage/workspace-delete';
 import type { WorkspaceState } from './storage/repository';
 import { VaultRepository } from './storage/repository';
 import {
@@ -184,7 +185,7 @@ class IdbSession implements SessionPort {
 
   constructor(
     private readonly db: Db,
-    dek: CryptoKey,
+    private readonly dek: CryptoKey,
     private readonly nowIso: () => string,
     private readonly onClose: () => void,
   ) {
@@ -252,6 +253,15 @@ class IdbSession implements SessionPort {
         contas,
       );
     });
+  }
+
+  async deleteWorkspace(workspaceId: string): Promise<void> {
+    this.aberta();
+    if (this.repo.safeMode) {
+      throw new AppError('SAFE_MODE', 'O cofre está em modo seguro. Nada foi apagado.');
+    }
+    await guarded(() => deleteWorkspaceData(this.db, this.dek, workspaceId));
+    this.states.delete(workspaceId);
   }
 
   close(): void {

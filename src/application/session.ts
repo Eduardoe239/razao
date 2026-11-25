@@ -9,7 +9,10 @@ import { openingBalance } from '@/domain/operations';
 import { AppError } from './errors';
 import type { Account, AccountKind, Workspace, WorkspaceKind } from './model';
 import { ENTITY, accountSchema, workspaceSchema } from './model';
-import type { Clock, IdSource, SessionPort, StorageIssue, StoredItem, WorkspaceSnapshot } from './ports';
+import { accountsOf, workspaceOf } from './session-read';
+import type { OpsContext, WorkspaceFootprint } from './account-ops';
+import * as ops from './account-ops';
+import type { Clock, IdSource, SessionPort, StorageIssue, StoredItem } from './ports';
 
 export interface AccountView {
   readonly account: Account;
@@ -50,30 +53,6 @@ function domainSafe<T>(fn: () => T): T {
   }
 }
 
-function parseItem<T>(
-  item: StoredItem,
-  schema: { safeParse(v: unknown): { success: true; data: T } | { success: false } },
-): T {
-  const r = schema.safeParse(item.data);
-  if (!r.success) {
-    throw new AppError(
-      'STORAGE',
-      `Um registro (${item.type}) está fora do formato esperado. Nada foi alterado. Abra Backup e segurança.`,
-    );
-  }
-  return r.data;
-}
-
-export function workspaceOf(snap: WorkspaceSnapshot): Workspace {
-  const item = snap.items.find((i) => i.type === ENTITY.workspace && i.id === snap.workspaceId);
-  if (!item) throw new AppError('STORAGE', 'O espaço não foi encontrado no cofre. Nada foi alterado.');
-  return parseItem(item, workspaceSchema);
-}
-
-export function accountsOf(snap: WorkspaceSnapshot): Account[] {
-  return snap.items.filter((i) => i.type === ENTITY.account).map((i) => parseItem(i, accountSchema));
-}
-
 const ORDEM: Record<WorkspaceKind, number> = { PF: 0, PJ: 1 };
 
 export class VaultSession {
@@ -101,6 +80,17 @@ export class VaultSession {
 
   /** COF-004: cria o espaço com moeda, fuso e início do mês, e as contas internas do livro-razão. */
   async createWorkspace(input: NewWorkspace): Promise<Workspace> {
+    this.assertWritable();
+    const existente = (await this.workspaces()).find((w) => w.kind === input.kind);
+    if (existente) {
+      const nome = input.kind === 'PF' ? 'Pessoal' : 'Negócio';
+      throw new AppError(
+        'INVALID',
+        existente.archived
+          ? `O espaço ${nome} está arquivado. Reative-o em Espaços.`
+          : `Já existe um espaço ${nome} neste cofre.`,
+      );
+    }
     const id = this.ids.newId();
     const agora = this.clock.nowIso();
     const ws: Workspace = {
@@ -200,6 +190,47 @@ export class VaultSession {
         after: { name: nome, kind: input.kind, opening: input.openingCents },
       },
     });
+  }
+
+  private get ctx(): OpsContext {
+    return { port: this.port, clock: this.clock };
+  }
+
+  updateAccount(workspaceId: string, input: Parameters<typeof ops.updateAccount>[2]) {
+    return ops.updateAccount(this.ctx, workspaceId, input);
+  }
+
+  setAccountArchived(workspaceId: string, input: Parameters<typeof ops.setAccountArchived>[2]) {
+    return ops.setAccountArchived(this.ctx, workspaceId, input);
+  }
+
+  transfer(workspaceId: string, input: Parameters<typeof ops.transferBetween>[2]) {
+    return ops.transferBetween(this.ctx, workspaceId, input);
+  }
+
+  adjustBalance(workspaceId: string, input: Parameters<typeof ops.adjustBalance>[2]) {
+    return ops.adjustBalance(this.ctx, workspaceId, input);
+  }
+
+  async setWorkspaceArchived(workspaceId: string, archived: boolean) {
+    return ops.setWorkspaceArchived(this.ctx, await this.workspaces(), {
+      workspaceId,
+      archived,
+      operationId: this.ids.newId(),
+    });
+  }
+
+  workspaceFootprint(workspaceId: string): Promise<WorkspaceFootprint> {
+    return ops.workspaceFootprint(this.ctx, workspaceId);
+  }
+
+  deleteWorkspace(workspaceId: string, typed: string): Promise<void> {
+    return ops.deleteWorkspace(this.ctx, workspaceId, typed);
+  }
+
+  /** Hoje no fuso do espaço, para o valor inicial dos campos de data. */
+  today(workspace: Workspace): string {
+    return this.clock.today(workspace.timeZone);
   }
 
   newOperationId(): string {
