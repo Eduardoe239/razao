@@ -7,6 +7,7 @@ import type {
   BackupFilePort,
   BackupHeader,
   Clock,
+  UpdatePort,
   Credential,
   IdSource,
   StorageStatus,
@@ -14,7 +15,7 @@ import type {
   VaultPresence,
 } from './ports';
 import type { Prefs } from './reminder';
-import { VaultSession } from './session';
+import { VaultSession, WriteTracker } from './session';
 import { checkPassword, waitAfterFailures } from './vault-rules';
 
 export interface PendingVault {
@@ -38,6 +39,10 @@ export interface RazaoApp {
   restoreIntoNewVault(pending: PendingVault, preview: BackupPreview): Promise<VaultSession>;
   /** PRIV-05: apaga tudo deste site neste navegador, com a frase digitada. */
   wipeAll(typed: string): Promise<void>;
+  /** SEC-05: avisa de versão nova. */
+  onUpdateAvailable(f: () => void): () => void;
+  /** SEC-05: espera as gravações em andamento terminarem e só então ativa a versão nova. */
+  applyUpdate(): Promise<void>;
   readonly clock: Clock;
 }
 
@@ -49,9 +54,11 @@ export function createRazaoApp(deps: {
   ids: IdSource;
   file: BackupFilePort;
   prefs: Prefs;
+  updates: UpdatePort;
 }): RazaoApp {
-  const { vault, clock, ids, file, prefs } = deps;
-  const extras = { file, prefs };
+  const { vault, clock, ids, file, prefs, updates } = deps;
+  const writes = new WriteTracker();
+  const extras = { file, prefs, writes };
   const restante = () => Math.max(0, Math.ceil((vault.attempts().waitUntilMs - clock.nowMs()) / 1000));
 
   return {
@@ -96,6 +103,13 @@ export function createRazaoApp(deps: {
       const session = await pending.confirm();
       await session.restoreBackup(preview);
       return session;
+    },
+
+    onUpdateAvailable: (f) => updates.onAvailable(f),
+
+    async applyUpdate() {
+      await writes.idle();
+      await updates.apply();
     },
 
     async wipeAll(typed) {

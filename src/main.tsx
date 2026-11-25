@@ -7,6 +7,7 @@ import { createRazaoApp } from './application/app';
 import { browserClock } from './infra/clock';
 import { uuidv7 } from './infra/ids';
 import { createBackupFilePort } from './infra/backup/file';
+import { createServiceWorkerUpdates, noUpdates } from './infra/pwa';
 import { createVaultPort } from './infra/vault-adapter';
 import { App } from './ui/App';
 import { AppContext } from './ui/context';
@@ -31,6 +32,8 @@ const app = createRazaoApp({
   ids: { newId: () => uuidv7(Date.now()) },
   file: createBackupFilePort(),
   prefs: window.localStorage,
+  // O service worker só existe no build; no modo de desenvolvimento não há versão nova para avisar.
+  updates: import.meta.env.PROD ? createServiceWorkerUpdates() : noUpdates,
 });
 
 createRoot(raiz).render(

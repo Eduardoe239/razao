@@ -166,6 +166,14 @@ export interface VaultPort {
   wipeAll(): Promise<void>;
 }
 
+/** Versão nova do app (SEC-05): avisa quando há uma esperando e aplica só quando pedida. */
+export interface UpdatePort {
+  /** Chama f quando houver versão nova esperando. Devolve a função que para de ouvir. */
+  onAvailable(f: () => void): () => void;
+  /** Ativa a versão nova e recarrega a página. */
+  apply(): Promise<void>;
+}
+
 export interface Clock {
   /** Relógio de parede, em ISO 8601, para auditoria. */
   nowIso(): string;

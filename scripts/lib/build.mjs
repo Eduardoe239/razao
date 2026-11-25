@@ -11,6 +11,8 @@ export const TEXTOS_PERMITIDOS = [
   /^https:\/\/reactjs\.org\/docs\/error-decoder/,
   /^https?:\/\/json-schema\.org\/draft(-04|-07|\/2020-12)\/schema#?$/,
   /^http:\/\/\[\$\{[a-zA-Z_$][\w$]*\}\]$/,
+  // Link de ajuda dentro de uma mensagem de erro do Workbox, no service worker; nunca é aberto.
+  /^https:\/\/bit\.ly\/wb-precache$/,
 ];
 
 const PADRAO_URL = /\bhttps?:\/\/[^\s"'`)<>\\]+/g;

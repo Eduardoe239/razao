@@ -71,12 +71,38 @@ const ORDEM: Record<WorkspaceKind, number> = { PF: 0, PJ: 1 };
 export interface SessionExtras {
   readonly file: BackupFilePort;
   readonly prefs: Prefs;
+  readonly writes: WriteTracker;
+}
+
+/** Conta as gravações em andamento, para a atualização do app nunca recarregar no meio de uma (SEC-05). */
+export class WriteTracker {
+  private emAndamento = 0;
+  private espera: (() => void)[] = [];
+
+  async track<T>(p: Promise<T>): Promise<T> {
+    this.emAndamento++;
+    try {
+      return await p;
+    } finally {
+      this.emAndamento--;
+      if (this.emAndamento === 0) for (const f of this.espera.splice(0)) f();
+    }
+  }
+
+  get busy(): boolean {
+    return this.emAndamento > 0;
+  }
+
+  /** Resolve quando não houver nenhuma gravação em andamento. */
+  idle(): Promise<void> {
+    return this.emAndamento === 0 ? Promise.resolve() : new Promise((r) => this.espera.push(r));
+  }
 }
 
 /** Envolve a porta para anotar cada gravação (lembrete de backup, PERS-04). */
-function anotando(port: SessionPort, prefs: Prefs, clock: Clock): SessionPort {
+function anotando(port: SessionPort, prefs: Prefs, clock: Clock, writes: WriteTracker): SessionPort {
   const anotar = <T>(p: Promise<T>) =>
-    p.then((r) => {
+    writes.track(p).then((r) => {
       noteChange(prefs, clock.nowIso());
       return r;
     });
@@ -111,7 +137,7 @@ export class VaultSession {
     private readonly ids: IdSource,
     private readonly extras: SessionExtras,
   ) {
-    this.port = anotando(port, extras.prefs, clock);
+    this.port = anotando(port, extras.prefs, clock, extras.writes);
   }
 
   private get backupDeps() {

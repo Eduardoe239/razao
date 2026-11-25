@@ -16,6 +16,8 @@ export default defineConfig({
   testDir: './e2e',
   forbidOnly: !!process.env['CI'],
   retries: 0,
+  // Um teste por vez: o teste de atualização (SEC-05) troca o service worker servido para todas as abas.
+  workers: 1,
   reporter: process.env['CI'] ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: 'http://localhost:4173',

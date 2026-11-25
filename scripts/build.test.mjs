@@ -27,6 +27,11 @@ describe('[SEC-03] verificação de endereços externos no build', () => {
     expect(urlsExternas('https://json-schema.org/draft-07/schema/../x http://[::1]/coleta')).toHaveLength(2);
   });
 
+  it('ignora só o link de ajuda exato do Workbox', () => {
+    expect(urlsExternas('"https://bit.ly/wb-precache"')).toEqual([]);
+    expect(urlsExternas('"https://bit.ly/outra-coisa"')).toEqual(['https://bit.ly/outra-coisa']);
+  });
+
   it('não repete o mesmo endereço', () => {
     expect(urlsExternas('https://a.exemplo.com https://a.exemplo.com')).toHaveLength(1);
   });

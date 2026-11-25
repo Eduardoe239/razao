@@ -10,6 +10,7 @@ import { Onboarding } from './screens/Onboarding';
 import { Unlock } from './screens/Unlock';
 import { VaultMissing } from './screens/VaultMissing';
 import { Shell } from './shell/Shell';
+import { UpdateBanner } from './UpdateBanner';
 import { useAutoLock } from './useAutoLock';
 
 type Fase =
@@ -21,7 +22,17 @@ type Fase =
   | { readonly t: 'bloqueado'; readonly aviso?: string }
   | { readonly t: 'aberto'; readonly session: VaultSession; readonly workspaces: readonly Workspace[] };
 
+/** Raiz com o aviso de versão nova, que vale em qualquer tela. */
 export function App() {
+  return (
+    <>
+      <UpdateBanner />
+      <Telas />
+    </>
+  );
+}
+
+function Telas() {
   const app = useRazao();
   const [fase, setFase] = useState<Fase>({ t: 'carregando' });
   const [tentativa, setTentativa] = useState(0);

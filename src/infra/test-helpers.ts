@@ -7,6 +7,7 @@ import { parseCivilDate } from '@/domain/civil-date';
 import { newArgon2Params } from './crypto/kdf';
 import { uuidv7 } from './ids';
 import { createBackupFilePort } from './backup/file';
+import { noUpdates } from './pwa';
 import { createVaultPort } from './vault-adapter';
 
 let n = 0;
@@ -35,7 +36,14 @@ export function montar(local = new Map<string, string>(), dbName = `razao-app-${
   });
   let seq = 0;
   const file = createBackupFilePort({ kdf: () => newArgon2Params({ memoryKiB: 256 }) });
-  const app = createRazaoApp({ vault, clock, ids: { newId: () => uuidv7(ms + seq++) }, file, prefs: kv });
+  const app = createRazaoApp({
+    vault,
+    clock,
+    ids: { newId: () => uuidv7(ms + seq++) },
+    file,
+    prefs: kv,
+    updates: noUpdates,
+  });
   return { app, vault, file, local, dbName, avancar: (s: number) => (ms += s * 1000) };
 }
 
