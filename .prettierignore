@@ -1,0 +1,12 @@
+dist
+bench-dist
+coverage
+playwright-report
+test-results
+node_modules
+package-lock.json
+fixtures
+public
+src/ui/theme/tokens.css
+src/ui/theme/tokens.json
+rastreio/requisitos.json

@@ -1,0 +1,4 @@
+{
+  "SEC-08": "CI, job dependencias: npm ci, npm audit sem alta ou crítica e licenças permitidas",
+  "SEC-10": "CI, job segredos: varredura com gitleaks em todo push"
+}

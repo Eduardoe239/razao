@@ -1,0 +1,1022 @@
+[
+  {
+    "id": "COF-001",
+    "titulo": "Criar o cofre local com senha e código de recuperação",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "COF-002",
+    "titulo": "Desbloquear o cofre com a senha e bloquear automaticamente por inatividade",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "COF-003",
+    "titulo": "Trocar a senha do cofre sem perder dados",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "COF-004",
+    "titulo": "Criar espaços PF e PJ, com nome, moeda (BRL), fuso e início do mês financeiro",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "COF-005",
+    "titulo": "Trocar de espaço com o ativo sempre visível",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "COF-006",
+    "titulo": "Onboarding em 5 passos (Volume 02, seção 4)",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "COF-007",
+    "titulo": "Arquivar e excluir um espaço, com backup oferecido antes",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "COF-008",
+    "titulo": "Desbloqueio por biometria do aparelho (WebAuthn), opcional",
+    "prioridade": "Poderia",
+    "fase": "1.1"
+  },
+  {
+    "id": "CON-001",
+    "titulo": "Criar conta (corrente, digital, poupança, carteira, dinheiro, investimento) com saldo de abertura e data",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "CON-002",
+    "titulo": "Editar, arquivar e reativar conta",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "CON-003",
+    "titulo": "Ver o saldo de cada conta e o total do espaço",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "CON-004",
+    "titulo": "Transferência entre contas do mesmo espaço, com tarifa opcional",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "CON-005",
+    "titulo": "Retirada (PJ → PF) e aporte (PF → PJ) entre espaços",
+    "prioridade": "Deve",
+    "fase": "Alpha 3"
+  },
+  {
+    "id": "CON-006",
+    "titulo": "Ajuste de saldo com motivo",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "CON-007",
+    "titulo": "Encerrar conta só com saldo zero ou transferência final",
+    "prioridade": "Deveria",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "BKP-001",
+    "titulo": "Exportar backup cifrado do cofre inteiro ou de um espaço",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "BKP-002",
+    "titulo": "Validar o backup antes de restaurar, com prévia",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "BKP-003",
+    "titulo": "Restaurar com cópia automática do estado atual antes",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "BKP-004",
+    "titulo": "Lembrete de backup periódico",
+    "prioridade": "Cancelado",
+    "fase": "—"
+  },
+  {
+    "id": "BKP-005",
+    "titulo": "Histórico de auditoria sem limite fixo",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "BKP-006",
+    "titulo": "Recuperação segura após corrupção ou erro",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "BKP-007",
+    "titulo": "Verificação de integridade sob demanda",
+    "prioridade": "Deveria",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "BKP-008",
+    "titulo": "Importar dados da base histórica (beta.20)",
+    "prioridade": "Deveria",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "LAN-001",
+    "titulo": "Registrar receita ou despesa com valor, data, conta, categoria e descrição",
+    "prioridade": "Deve",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "LAN-002",
+    "titulo": "Entrada de valor em formato brasileiro",
+    "prioridade": "Deve",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "LAN-003",
+    "titulo": "Status realizado ou pendente, com data prevista",
+    "prioridade": "Deve",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "LAN-004",
+    "titulo": "Editar lançamento, com histórico da alteração",
+    "prioridade": "Deve",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "LAN-005",
+    "titulo": "Estornar lançamento realizado",
+    "prioridade": "Deve",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "LAN-006",
+    "titulo": "Excluir lançamento, com desfazer por 10 s e registro na auditoria",
+    "prioridade": "Deve",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "LAN-007",
+    "titulo": "Dividir um lançamento em várias categorias",
+    "prioridade": "Deve",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "LAN-008",
+    "titulo": "Tags livres e observação",
+    "prioridade": "Deveria",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "LAN-009",
+    "titulo": "Anexar comprovante (imagem ou PDF)",
+    "prioridade": "Deveria",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "LAN-010",
+    "titulo": "Duplicar lançamento",
+    "prioridade": "Poderia",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "LAN-011",
+    "titulo": "Lista com filtros por período, conta, categoria, tipo, status e tag",
+    "prioridade": "Deve",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "LAN-012",
+    "titulo": "Proteção contra clique duplo e reenvio",
+    "prioridade": "Deve",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "CAT-001",
+    "titulo": "Categorias padrão distintas para PF e PJ, com subcategorias",
+    "prioridade": "Deve",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "CAT-002",
+    "titulo": "Criar, renomear, mesclar e arquivar categorias",
+    "prioridade": "Deve",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "CAT-003",
+    "titulo": "Regras automáticas (\"descrição contém X → categoria Y\") com ordem de prioridade",
+    "prioridade": "Deve",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "CAT-004",
+    "titulo": "Recategorizar em lote com prévia",
+    "prioridade": "Deveria",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "CAR-001",
+    "titulo": "Cadastrar cartão com limite, dia de fechamento, dia de vencimento e conta de pagamento padrão",
+    "prioridade": "Deve",
+    "fase": "Alpha 2b"
+  },
+  {
+    "id": "CAR-002",
+    "titulo": "Registrar compra à vista no cartão",
+    "prioridade": "Deve",
+    "fase": "Alpha 2b"
+  },
+  {
+    "id": "CAR-003",
+    "titulo": "Compra parcelada",
+    "prioridade": "Deve",
+    "fase": "Alpha 2b"
+  },
+  {
+    "id": "CAR-004",
+    "titulo": "Fatura com ciclo aberta, fechada, vencida, paga parcialmente e paga",
+    "prioridade": "Deve",
+    "fase": "Alpha 2b"
+  },
+  {
+    "id": "CAR-005",
+    "titulo": "Pagar fatura total ou parcial",
+    "prioridade": "Deve",
+    "fase": "Alpha 2b"
+  },
+  {
+    "id": "CAR-006",
+    "titulo": "Pagar com saldo insuficiente (REQ-INV-PAY-001 da D-005)",
+    "prioridade": "Deve",
+    "fase": "Alpha 2b"
+  },
+  {
+    "id": "CAR-007",
+    "titulo": "Estorno e crédito na fatura",
+    "prioridade": "Deve",
+    "fase": "Alpha 2b"
+  },
+  {
+    "id": "CAR-008",
+    "titulo": "Limite usado e disponível",
+    "prioridade": "Deve",
+    "fase": "Alpha 2b"
+  },
+  {
+    "id": "CAR-009",
+    "titulo": "Antecipar ou quitar parcelamento",
+    "prioridade": "Deveria",
+    "fase": "Alpha 3"
+  },
+  {
+    "id": "CAR-010",
+    "titulo": "Mudar dia de fechamento sem reescrever faturas passadas",
+    "prioridade": "Deveria",
+    "fase": "Alpha 2b"
+  },
+  {
+    "id": "CAR-011",
+    "titulo": "Anuidade, juros e IOF como lançamentos próprios da fatura",
+    "prioridade": "Deveria",
+    "fase": "Alpha 2b"
+  },
+  {
+    "id": "IMP-001",
+    "titulo": "Importar CSV e OFX de bancos brasileiros, com mapeamento de colunas",
+    "prioridade": "Deve",
+    "fase": "Alpha 2b"
+  },
+  {
+    "id": "IMP-002",
+    "titulo": "Prévia antes de gravar, com novas, possíveis duplicatas e rejeitadas",
+    "prioridade": "Deve",
+    "fase": "Alpha 2b"
+  },
+  {
+    "id": "IMP-003",
+    "titulo": "Identificador determinístico por linha (D-014)",
+    "prioridade": "Deve",
+    "fase": "Alpha 2b"
+  },
+  {
+    "id": "IMP-004",
+    "titulo": "Detectar transferências entre contas próprias e pagamento de fatura",
+    "prioridade": "Deve",
+    "fase": "Alpha 2b"
+  },
+  {
+    "id": "IMP-005",
+    "titulo": "Desfazer uma importação inteira",
+    "prioridade": "Deve",
+    "fase": "Alpha 2b"
+  },
+  {
+    "id": "IMP-006",
+    "titulo": "Importar fatura de cartão (CSV do banco)",
+    "prioridade": "Deveria",
+    "fase": "Alpha 2b"
+  },
+  {
+    "id": "IMP-007",
+    "titulo": "Conferência de saldo com o extrato",
+    "prioridade": "Deve",
+    "fase": "Alpha 2b"
+  },
+  {
+    "id": "IMP-008",
+    "titulo": "Importar QIF e planilhas Excel",
+    "prioridade": "Poderia",
+    "fase": "Alpha 4"
+  },
+  {
+    "id": "IMP-009",
+    "titulo": "Lembrar o mapeamento de colunas por banco",
+    "prioridade": "Deveria",
+    "fase": "Alpha 2b"
+  },
+  {
+    "id": "ORC-001",
+    "titulo": "Orçamento mensal por categoria, com total do mês",
+    "prioridade": "Deve",
+    "fase": "Alpha 3"
+  },
+  {
+    "id": "ORC-002",
+    "titulo": "Sugestão automática a partir dos últimos 3 meses",
+    "prioridade": "Deve",
+    "fase": "Alpha 3"
+  },
+  {
+    "id": "ORC-003",
+    "titulo": "Alertas a 80% e 100% do limite, configuráveis",
+    "prioridade": "Deve",
+    "fase": "Alpha 3"
+  },
+  {
+    "id": "ORC-004",
+    "titulo": "Compra no cartão conta no orçamento na data da compra, não no pagamento da fatura",
+    "prioridade": "Deve",
+    "fase": "Alpha 3"
+  },
+  {
+    "id": "ORC-005",
+    "titulo": "Sobra do mês passa para o seguinte (opcional, desligado por padrão)",
+    "prioridade": "Deveria",
+    "fase": "Alpha 3"
+  },
+  {
+    "id": "ORC-006",
+    "titulo": "Modo envelope / base zero opcional (\"dê um destino a cada real\")",
+    "prioridade": "Poderia",
+    "fase": "1.1"
+  },
+  {
+    "id": "ORC-007",
+    "titulo": "Orçamento PJ por centro de custo",
+    "prioridade": "Deveria",
+    "fase": "Alpha 4"
+  },
+  {
+    "id": "REC-001",
+    "titulo": "Recorrência semanal, quinzenal, mensal, bimestral, trimestral, semestral e anual, com início e fim",
+    "prioridade": "Deve",
+    "fase": "Alpha 3"
+  },
+  {
+    "id": "REC-002",
+    "titulo": "Ocorrências geradas como pendentes, nunca em duplicidade",
+    "prioridade": "Deve",
+    "fase": "Alpha 3"
+  },
+  {
+    "id": "REC-003",
+    "titulo": "Editar só esta, esta e as próximas, ou todas",
+    "prioridade": "Deve",
+    "fase": "Alpha 3"
+  },
+  {
+    "id": "REC-004",
+    "titulo": "Pausar e encerrar recorrência",
+    "prioridade": "Deve",
+    "fase": "Alpha 3"
+  },
+  {
+    "id": "REC-005",
+    "titulo": "Calendário mensal e lista de vencimentos",
+    "prioridade": "Deve",
+    "fase": "Alpha 3"
+  },
+  {
+    "id": "REC-006",
+    "titulo": "Lembretes de vencimento por notificação do aparelho (opcional)",
+    "prioridade": "Deveria",
+    "fase": "Alpha 3"
+  },
+  {
+    "id": "REC-007",
+    "titulo": "Marcar ocorrência pendente como paga com um toque",
+    "prioridade": "Deve",
+    "fase": "Alpha 3"
+  },
+  {
+    "id": "MET-001",
+    "titulo": "Meta com valor, prazo e conta vinculada",
+    "prioridade": "Deve",
+    "fase": "Alpha 3"
+  },
+  {
+    "id": "MET-002",
+    "titulo": "Reserva de emergência guiada (sugere 3 a 6 meses de despesas médias)",
+    "prioridade": "Deveria",
+    "fase": "Alpha 3"
+  },
+  {
+    "id": "MET-003",
+    "titulo": "Aporte e resgate de meta como movimentos reais",
+    "prioridade": "Deve",
+    "fase": "Alpha 3"
+  },
+  {
+    "id": "MET-004",
+    "titulo": "Cadastro de dívida ou financiamento com saldo devedor, parcelas e taxa informada",
+    "prioridade": "Deve",
+    "fase": "Alpha 3"
+  },
+  {
+    "id": "MET-005",
+    "titulo": "Simular quitação antecipada e amortização extra",
+    "prioridade": "Deveria",
+    "fase": "Alpha 4"
+  },
+  {
+    "id": "MET-006",
+    "titulo": "Plano de saída de dívidas (bola de neve ou avalanche)",
+    "prioridade": "Poderia",
+    "fase": "1.1"
+  },
+  {
+    "id": "FLX-001",
+    "titulo": "Previsão de saldo diário por 30, 60 e 90 dias",
+    "prioridade": "Deve",
+    "fase": "Alpha 4"
+  },
+  {
+    "id": "FLX-002",
+    "titulo": "Pior dia e datas de saldo negativo",
+    "prioridade": "Deve",
+    "fase": "Alpha 4"
+  },
+  {
+    "id": "FLX-003",
+    "titulo": "Faixa de confiança na parte estimada",
+    "prioridade": "Deve",
+    "fase": "Alpha 4"
+  },
+  {
+    "id": "FLX-004",
+    "titulo": "Cenários \"e se\" (compra, aumento, atraso de recebimento)",
+    "prioridade": "Deveria",
+    "fase": "Alpha 4"
+  },
+  {
+    "id": "FLX-005",
+    "titulo": "Fim do mês previsto no Início",
+    "prioridade": "Deve",
+    "fase": "Alpha 4"
+  },
+  {
+    "id": "TIT-001",
+    "titulo": "Título a receber ou a pagar com contraparte, valor, emissão, vencimento e categoria",
+    "prioridade": "Deve",
+    "fase": "Alpha 3"
+  },
+  {
+    "id": "TIT-002",
+    "titulo": "Baixa total ou parcial vinculada ao movimento real",
+    "prioridade": "Deve",
+    "fase": "Alpha 3"
+  },
+  {
+    "id": "TIT-003",
+    "titulo": "Parcelamento de título (ex.: cliente paga em 3x)",
+    "prioridade": "Deve",
+    "fase": "Alpha 3"
+  },
+  {
+    "id": "TIT-004",
+    "titulo": "Cancelar e renegociar título, com histórico",
+    "prioridade": "Deve",
+    "fase": "Alpha 3"
+  },
+  {
+    "id": "TIT-005",
+    "titulo": "Visão de atraso por faixa (a vencer, 1–30, 31–60, 61–90, acima de 90 dias)",
+    "prioridade": "Deve",
+    "fase": "Alpha 3"
+  },
+  {
+    "id": "TIT-006",
+    "titulo": "Clientes e fornecedores com dados mínimos (nome, contato opcional)",
+    "prioridade": "Deve",
+    "fase": "Alpha 3"
+  },
+  {
+    "id": "TIT-007",
+    "titulo": "Mensagem de cobrança pronta para copiar ou abrir no WhatsApp",
+    "prioridade": "Deveria",
+    "fase": "Alpha 3"
+  },
+  {
+    "id": "TIT-008",
+    "titulo": "Recibo simples em PDF para o cliente",
+    "prioridade": "Poderia",
+    "fase": "Alpha 4"
+  },
+  {
+    "id": "NEG-001",
+    "titulo": "Resultado do mês: receitas, custos, despesas e lucro",
+    "prioridade": "Deve",
+    "fase": "Alpha 4"
+  },
+  {
+    "id": "NEG-002",
+    "titulo": "DRE gerencial por competência ou por caixa, à escolha",
+    "prioridade": "Deve",
+    "fase": "Alpha 4"
+  },
+  {
+    "id": "NEG-003",
+    "titulo": "Centros de custo ou projetos, com rateio",
+    "prioridade": "Deveria",
+    "fase": "Alpha 4"
+  },
+  {
+    "id": "NEG-004",
+    "titulo": "Acompanhamento do limite anual de faturamento do MEI",
+    "prioridade": "Deve",
+    "fase": "Alpha 4"
+  },
+  {
+    "id": "NEG-005",
+    "titulo": "Lembrete mensal do DAS-MEI como conta a pagar",
+    "prioridade": "Deveria",
+    "fase": "Alpha 3"
+  },
+  {
+    "id": "NEG-006",
+    "titulo": "Pró-labore ou retirada fixa sugerida a partir do lucro médio",
+    "prioridade": "Deveria",
+    "fase": "Alpha 4"
+  },
+  {
+    "id": "NEG-007",
+    "titulo": "Pacote para o contador: relatórios do mês em PDF e CSV",
+    "prioridade": "Deveria",
+    "fase": "Alpha 4"
+  },
+  {
+    "id": "REL-001",
+    "titulo": "Receitas e despesas por categoria e por mês, com comparação entre períodos",
+    "prioridade": "Deve",
+    "fase": "Alpha 4"
+  },
+  {
+    "id": "REL-002",
+    "titulo": "Evolução do saldo e do patrimônio líquido",
+    "prioridade": "Deve",
+    "fase": "Alpha 4"
+  },
+  {
+    "id": "REL-003",
+    "titulo": "Gastos por cartão e por fatura",
+    "prioridade": "Deve",
+    "fase": "Alpha 4"
+  },
+  {
+    "id": "REL-004",
+    "titulo": "Todo gráfico tem alternativa em tabela e abre os lançamentos de origem",
+    "prioridade": "Deve",
+    "fase": "Alpha 4"
+  },
+  {
+    "id": "REL-005",
+    "titulo": "Busca global por descrição, valor, data, categoria, tag e contraparte",
+    "prioridade": "Deve",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "REL-006",
+    "titulo": "Exportar CSV de qualquer lista ou relatório",
+    "prioridade": "Deve",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "REL-007",
+    "titulo": "Exportar relatório em PDF",
+    "prioridade": "Deveria",
+    "fase": "Alpha 4"
+  },
+  {
+    "id": "REL-008",
+    "titulo": "Exportação completa em JSON aberto e documentado",
+    "prioridade": "Deve",
+    "fase": "Alpha 4"
+  },
+  {
+    "id": "REL-009",
+    "titulo": "Relatório anual para ajudar no Imposto de Renda (rendimentos, despesas dedutíveis marcadas, dívidas e bens)",
+    "prioridade": "Deveria",
+    "fase": "Alpha 4"
+  },
+  {
+    "id": "IA-001",
+    "titulo": "Sugestão de categoria que aprende com o usuário, por espaço",
+    "prioridade": "Deve",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "IA-002",
+    "titulo": "Detecção de cobrança duplicada, assinatura nova e aumento de assinatura",
+    "prioridade": "Deve",
+    "fase": "Alpha 2b"
+  },
+  {
+    "id": "IA-003",
+    "titulo": "Detecção de gasto fora do padrão por categoria",
+    "prioridade": "Deveria",
+    "fase": "Alpha 3"
+  },
+  {
+    "id": "IA-004",
+    "titulo": "Botão \"Explicar\" em saldos, totais e previsões",
+    "prioridade": "Deve",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "IA-005",
+    "titulo": "Resumo semanal no Início",
+    "prioridade": "Deve",
+    "fase": "Alpha 3"
+  },
+  {
+    "id": "IA-006",
+    "titulo": "No máximo 3 alertas priorizados; alerta dispensado não volta",
+    "prioridade": "Deve",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "IA-007",
+    "titulo": "Alertas PJ: caixa apertado, cliente atrasado, limite do MEI",
+    "prioridade": "Deve",
+    "fase": "Alpha 4"
+  },
+  {
+    "id": "IA-008",
+    "titulo": "Assistente local (nível 2): perguntas em português respondidas com ferramentas do domínio, rodando no navegador",
+    "prioridade": "Deve",
+    "fase": "Alpha 5"
+  },
+  {
+    "id": "IA-009",
+    "titulo": "Assistente em nuvem (nível 3) com consentimento explícito e chave do próprio usuário",
+    "prioridade": "Deveria",
+    "fase": "Alpha 5"
+  },
+  {
+    "id": "IA-010",
+    "titulo": "Rascunhos propostos pela IA (lançamento, regra, orçamento, lembrete)",
+    "prioridade": "Deve",
+    "fase": "Alpha 5"
+  },
+  {
+    "id": "IA-011",
+    "titulo": "Resistência a instruções escondidas em descrições, extratos e anexos",
+    "prioridade": "Deve",
+    "fase": "Alpha 5"
+  },
+  {
+    "id": "IA-012",
+    "titulo": "Conjunto de avaliação com perguntas PF e PJ",
+    "prioridade": "Deve",
+    "fase": "Alpha 5"
+  },
+  {
+    "id": "IA-013",
+    "titulo": "Desligar qualquer nível da IA nas configurações",
+    "prioridade": "Deve",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "NFR-001",
+    "titulo": "Funciona offline por completo depois da primeira carga",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "NFR-002",
+    "titulo": "Instalável como app no computador e no celular (PWA)",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "NFR-003",
+    "titulo": "Dados cifrados no aparelho com chave derivada da senha (algoritmo e parâmetros no Volume 09)",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "NFR-004",
+    "titulo": "Nenhum dado sai do aparelho sem ação explícita do usuário",
+    "prioridade": "Cancelado",
+    "fase": "—"
+  },
+  {
+    "id": "NFR-005",
+    "titulo": "Sem telemetria; relatório de erro só enviado se o usuário escolher",
+    "prioridade": "Cancelado",
+    "fase": "—"
+  },
+  {
+    "id": "NFR-006",
+    "titulo": "Desempenho nos aparelhos de referência do Volume 09",
+    "prioridade": "Deve",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "NFR-007",
+    "titulo": "Acessibilidade WCAG 2.2 AA nas jornadas críticas",
+    "prioridade": "Deve",
+    "fase": "Alpha 5"
+  },
+  {
+    "id": "NFR-008",
+    "titulo": "Responsivo de 360 px a 1920 px",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "NFR-009",
+    "titulo": "Interface em português do Brasil, valores em R$ e datas dd/mm/aaaa",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "NFR-010",
+    "titulo": "Migrações de esquema versionadas e reversíveis",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "NFR-011",
+    "titulo": "Atualização do app com aviso e sem interromper uma operação em andamento",
+    "prioridade": "Deve",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "NFR-012",
+    "titulo": "CSP restritiva e nenhuma dependência de terceiros em tempo de execução",
+    "prioridade": "Cancelado",
+    "fase": "—"
+  },
+  {
+    "id": "NFR-013",
+    "titulo": "Testes automatizados de comportamento, não só de texto do código",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "NFR-014",
+    "titulo": "Hospedagem com custo zero",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "SEC-01",
+    "titulo": "CSP estrita pelo `_headers` do Cloudflare (Volume 09)",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "SEC-02",
+    "titulo": "Cabeçalhos HSTS, `nosniff`, `no-referrer` e `Permissions-Policy` restritiva",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "SEC-03",
+    "titulo": "Nenhum script, fonte, imagem ou análise de terceiros em produção",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "SEC-04",
+    "titulo": "Proibidos `eval`, `new Function`, `innerHTML` e `dangerouslySetInnerHTML`",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "SEC-05",
+    "titulo": "Service worker serve só arquivos do próprio build; atualização nunca no meio de uma gravação",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "SEC-06",
+    "titulo": "Toda entrada externa validada por esquema Zod com limite de tamanho",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "SEC-07",
+    "titulo": "Exportação CSV neutraliza células que começam com `=`, `+`, `-` ou `@`",
+    "prioridade": "Deve",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "SEC-08",
+    "titulo": "Dependências com lockfile, `npm ci`, `npm audit` sem alta ou crítica e lista de licenças permitidas",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "SEC-09",
+    "titulo": "Chave de API do nível 3 e token de nuvem guardados cifrados no cofre",
+    "prioridade": "Deve",
+    "fase": "Alpha 5"
+  },
+  {
+    "id": "SEC-10",
+    "titulo": "Nenhum segredo no repositório",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "SEC-11",
+    "titulo": "Espera crescente na tela de desbloqueio após 5 tentativas erradas",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "PERS-01",
+    "titulo": "Pedir armazenamento persistente ao criar o cofre e a cada abertura",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "PERS-02",
+    "titulo": "Indicador de proteção do armazenamento, espaço usado e data do último backup",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "PERS-03",
+    "titulo": "No Safari fora do modo app, explicar como instalar antes de criar o cofre",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "PERS-04",
+    "titulo": "Lembrete de backup a cada 7 dias com dados novos (configurável)",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "PERS-05",
+    "titulo": "Todo backup é lido de volta e conferido antes de dizer \"Backup concluído\"",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "PERS-06",
+    "titulo": "Cofre sumido do navegador abre a tela de recuperação",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "PERS-07",
+    "titulo": "Falta de espaço desfaz a transação inteira e avisa",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "PERS-08",
+    "titulo": "Migração guiada quando o app mudar de endereço (Volume 06, seção 4.3)",
+    "prioridade": "Deve",
+    "fase": "Alpha 5"
+  },
+  {
+    "id": "PRIV-01",
+    "titulo": "Nenhuma telemetria, análise de uso, pixel ou identificador de usuário",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "PRIV-02",
+    "titulo": "Nenhum dado sai do aparelho sem ação explícita",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "PRIV-03",
+    "titulo": "IA nível 3 com prévia dos agregados antes de cada envio",
+    "prioridade": "Deve",
+    "fase": "Alpha 5"
+  },
+  {
+    "id": "PRIV-04",
+    "titulo": "Relatório de erro montado no aparelho, revisado e enviado pelo usuário",
+    "prioridade": "Deve",
+    "fase": "Alpha 5"
+  },
+  {
+    "id": "PRIV-05",
+    "titulo": "Apagar tudo: remove cofre, caches e service worker",
+    "prioridade": "Deve",
+    "fase": "Alpha 1"
+  },
+  {
+    "id": "PRIV-06",
+    "titulo": "Exportação completa e legível a qualquer momento, sem custo, inclusive com licença vencida",
+    "prioridade": "Deve",
+    "fase": "Alpha 4"
+  },
+  {
+    "id": "PRIV-07",
+    "titulo": "Política de privacidade em linguagem simples, com o que a empresa recebe e o que nunca recebe",
+    "prioridade": "Deve",
+    "fase": "Alpha 5"
+  },
+  {
+    "id": "PRIV-08",
+    "titulo": "Anexos sem metadados de imagem (EXIF e localização)",
+    "prioridade": "Deve",
+    "fase": "Alpha 2a"
+  },
+  {
+    "id": "LIC-01",
+    "titulo": "Licença conferida offline por assinatura digital",
+    "prioridade": "Deve",
+    "fase": "Alpha 5"
+  },
+  {
+    "id": "LIC-02",
+    "titulo": "Uma licença vale para todos os aparelhos da pessoa",
+    "prioridade": "Deve",
+    "fase": "Alpha 5"
+  },
+  {
+    "id": "LIC-03",
+    "titulo": "Licença vencida: 15 dias de carência com aviso, depois recursos pagos em modo leitura",
+    "prioridade": "Deve",
+    "fase": "Alpha 5"
+  },
+  {
+    "id": "LIC-04",
+    "titulo": "Chave privada de assinatura fora de qualquer repositório, com cópia offline",
+    "prioridade": "Deve",
+    "fase": "Alpha 5"
+  },
+  {
+    "id": "LIC-05",
+    "titulo": "O app aceita uma lista de chaves públicas, para rotação",
+    "prioridade": "Deve",
+    "fase": "Alpha 5"
+  },
+  {
+    "id": "LIC-06",
+    "titulo": "O código de licença não carrega dado financeiro",
+    "prioridade": "Deve",
+    "fase": "Alpha 5"
+  },
+  {
+    "id": "LIC-07",
+    "titulo": "Recurso pago tocado no plano Grátis explica o que faz e oferece o teste",
+    "prioridade": "Deve",
+    "fase": "Alpha 5"
+  },
+  {
+    "id": "LIC-08",
+    "titulo": "Teste de 14 dias de cada plano pago, sem cartão",
+    "prioridade": "Deve",
+    "fase": "Alpha 5"
+  }
+]

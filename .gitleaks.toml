@@ -1,0 +1,3 @@
+# Varredura de segredos (SEC-10). Usa as regras padrão do gitleaks.
+[extend]
+useDefault = true

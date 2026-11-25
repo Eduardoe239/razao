@@ -1,0 +1,56 @@
+.tela {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding: var(--space-6);
+}
+
+.cartao {
+  width: 100%;
+  max-width: 420px;
+  padding: var(--space-8) var(--space-6);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+  animation: entrar var(--dur-slow) var(--ease-out);
+}
+
+.logo {
+  border-radius: var(--radius-xl);
+}
+
+.titulo {
+  margin: var(--space-4) 0 0;
+  font-size: var(--text-display-size);
+  line-height: var(--text-display-line);
+  font-weight: var(--text-display-weight);
+  letter-spacing: var(--text-display-tracking);
+}
+
+.slogan {
+  margin: var(--space-1) 0 0;
+  color: var(--ink-muted);
+}
+
+.aviso {
+  margin: var(--space-6) 0 0;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-body-sm-size);
+  line-height: var(--text-body-sm-line);
+  color: var(--ink-muted);
+  background: var(--surface-subtle);
+  border-radius: var(--radius-md);
+}
+
+@keyframes entrar {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

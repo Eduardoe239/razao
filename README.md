@@ -1,37 +1,28 @@
 # O Razão
 
-**Suas finanças. Com lógica.**
+**Suas finanças. Com lógica.** Gestor financeiro brasileiro para pessoa física e para o seu negócio (MEI, autônomo, microempresa), com os dados cifrados no seu próprio aparelho.
 
-Gestor financeiro brasileiro para pessoas e pequenos negócios: local-first, com espaços PF e PJ separados, números auditáveis e uma assistente de IA que explica cada valor que mostra.
+> **Situação:** em reconstrução. A Alpha 1 está em andamento no branch `alpha1`: um app web instalável (PWA), local e cifrado. Ainda não guarda dados. A versão anterior (`1.22.0-beta.20`) está preservada nas tags `v1.22.0-beta.20` e `base-historica-21.2`.
 
-## Situação do projeto
+## Como funciona
 
-O O Razão está em **refundação**. O produto foi redefinido no Plano Mestre V3.0 e a aplicação será reconstruída como app web instalável (PWA) em TypeScript, com cofre local cifrado e livro-razão interno em partidas dobradas.
+- **Local e cifrado:** os dados ficam no navegador, num cofre cifrado com AES-256-GCM e chave protegida por Argon2id. Nada sai do aparelho sem uma ação sua.
+- **Contas certas:** um livro-razão em partidas dobradas, com dinheiro em centavos inteiros e regras verificadas por testes de propriedade.
+- **PF e PJ separados:** dois espaços isolados, com retirada e aporte registrados dos dois lados.
 
-O código deste repositório é a **base histórica** `1.22.0-beta.20`, com as correções dos subincrementos 21.1 e 21.2 (importação de extratos CSV/OFX). Ele está congelado como referência: suas regras de domínio e testes serão migrados para a nova aplicação.
+## Desenvolvimento
 
-| Item | Estado |
-|---|---|
-| Base histórica | `1.22.0-beta.20` + 21.1 + 21.2 — congelada |
-| Nova aplicação | Em especificação (Plano Mestre V3.0) |
-| Uso com dados reais | **Não recomendado** — há defeitos conhecidos nesta base |
-
-## Executar a base histórica
-
-Requisitos: Node.js 22.12 ou superior.
+Requer Node 22 ou mais novo (a CI usa o Node 24).
 
 ```bash
 npm ci
-npm test
-npm run dev
+npm run dev       # app em modo de desenvolvimento
+npm run verify    # tipos, lint, formato, testes, build e verificações
+npm run e2e       # testes ponta a ponta (Chromium, Firefox e WebKit)
 ```
 
-Use somente dados fictícios. A base histórica tem defeitos conhecidos: lançamentos feitos após as 21h podem receber a data do dia seguinte, e a opção "Tentar recuperação local" da tela de erro pode deixar os dados inacessíveis.
-
-## Stack da base histórica
-
-React 19, Vite 8 e Electron 45. O armazenamento Web usa `localStorage`, sem cifragem; o Desktop usa `safeStorage`. Os testes são scripts Node executados por `npm test` e pela CI (Ubuntu e Windows).
+Pilha: TypeScript estrito, React, Vite, Vitest e Playwright. Hospedagem estática no Cloudflare Pages.
 
 ## Licença
 
-Software proprietário. Copyright © 2026 Luís Eduardo de Sousa Barbosa. Todos os direitos reservados. Veja [LICENSE](./LICENSE).
+Código publicado só para leitura, com todos os direitos reservados. Veja [LICENSE](LICENSE).

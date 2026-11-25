@@ -1,9 +1,14 @@
+# Dependências e builds
 node_modules/
 dist/
-dist-desktop/
-.razao-desktop-test-profile/
-.razao-web-test-profile/
-test-beta18.log
-npm-audit.json
+bench-dist/
 coverage/
+playwright-report/
+test-results/
+
+# Nunca versionar segredos, dados reais ou arquivos temporários
+.env
+.env.*
+*.razao
 *.tmp
+*.log

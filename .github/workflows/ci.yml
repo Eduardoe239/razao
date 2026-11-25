@@ -1,13 +1,13 @@
-# CI mínima do O Razão (beta.21/21.1 — decisões D-013 e D-016).
-# Executa npm ci, npm test e npm run build em Ubuntu e Windows, com duas versões
-# de Node compatíveis com "engines" (>=22.12.0). Usa somente fixtures sintéticas;
-# não publica artefatos, não usa segredos e não baixa o binário do Electron.
+# CI do O Razão (Volume 06, seção 5.2; Volume 09, portão comum).
+# Ações fixadas por commit para evitar troca silenciosa de código de terceiros (ameaça T-01).
 name: CI
 
 on:
   push:
   pull_request:
-  workflow_dispatch:
+  schedule:
+    # Teste noturno: 03:00 em Fortaleza.
+    - cron: '0 6 * * *'
 
 permissions:
   contents: read
@@ -17,39 +17,72 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test-build:
-    name: ${{ matrix.os }} · Node ${{ matrix.node }}
-    runs-on: ${{ matrix.os }}
+  qualidade:
+    name: Tipos, lint, testes e build
+    runs-on: ubuntu-latest
     timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format
+      - run: npm run test:coverage
+      - run: npm run build
+      - run: npm run check:build
+      - run: npm run rastreio
+
+  dependencias:
+    name: Dependências (SEC-08)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm audit --audit-level=high
+      - run: npm run check:licenses
+
+  segredos:
+    name: Segredos (SEC-10)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  ponta-a-ponta:
+    name: Ponta a ponta (${{ matrix.motor }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        node: ['22.12.0', '24.x']
-    env:
-      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+        motor: [chromium, firefox, webkit]
     steps:
-      - name: Checkout
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          persist-credentials: false
-
-      - name: Setup Node
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
-        with:
-          node-version: ${{ matrix.node }}
+          node-version: 24
           cache: npm
-
-      - name: Versões
-        run: |
-          node --version
-          npm --version
-
-      - name: Instalar dependências (lockfile)
-        run: npm ci
-
-      - name: Testes
-        run: npm test
-
-      - name: Build Web
-        run: npm run build
+      - run: npm ci
+      - run: npx playwright install --with-deps ${{ matrix.motor }}
+      - run: npm run build
+      - run: npx playwright test --project="${{ matrix.motor }}-*"
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: relatorio-${{ matrix.motor }}
+          path: playwright-report
+          retention-days: 7
