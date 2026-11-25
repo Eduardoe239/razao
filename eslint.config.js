@@ -96,7 +96,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['src/**/*.test.{ts,tsx}', 'src/domain/testing/**/*.ts'],
+    files: ['src/**/*.test.{ts,tsx}', 'src/domain/testing/**/*.ts', 'src/**/test-helpers.ts'],
     rules: {
       // Os testes de propriedade usam semente fixa; o resto das regras continua valendo.
       'no-restricted-syntax': ['error', ...proibidosSeguranca],
@@ -106,7 +106,7 @@ export default tseslint.config(
         {
           raizSrc: path.join(raiz, 'src'),
           pacotes: Object.fromEntries(
-            Object.entries(pacotesPorCamada).map(([c, p]) => [c, [...p, 'vitest']]),
+            Object.entries(pacotesPorCamada).map(([c, p]) => [c, [...p, 'vitest', 'fake-indexeddb']]),
           ),
         },
       ],

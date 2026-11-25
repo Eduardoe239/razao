@@ -18,7 +18,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],
-      exclude: ['src/**/*.test.{ts,tsx}', 'src/main.tsx', 'src/domain/testing/**'],
+      exclude: ['src/**/*.test.{ts,tsx}', 'src/main.tsx', 'src/domain/testing/**', 'src/**/test-helpers.ts'],
       // NFR-013: o domínio financeiro precisa de 95% de linhas cobertas (Volume 09).
       thresholds: {
         'src/domain/**': { lines: 95 },
