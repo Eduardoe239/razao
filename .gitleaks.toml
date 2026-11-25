@@ -1,3 +1,9 @@
 # Varredura de segredos (SEC-10). Usa as regras padrão do gitleaks.
 [extend]
 useDefault = true
+
+# Backups sintéticos de teste: o conteúdo é cifrado com uma senha de teste escrita no próprio teste,
+# e não protege nenhum dado real (Volume 05, seção 6: backups de cada versão para os testes de migração).
+[allowlist]
+description = "Backups sintéticos usados nos testes de compatibilidade"
+paths = ['''src/infra/backup/fixtures/.*\.razao$''']

@@ -30,9 +30,21 @@ export function wipe(bytes: Uint8Array): void {
   bytes.fill(0);
 }
 
-const BASE64 = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+/** Caractere do alfabeto base64 (sem o "="). */
+function base64Char(c: number): boolean {
+  return (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || (c >= 48 && c <= 57) || c === 43 || c === 47;
+}
 
-/** Base64 conferido antes de decodificar; texto inválido vira null, nunca exceção genérica. */
+/**
+ * Base64 conferido antes de decodificar; texto inválido vira null, nunca exceção genérica.
+ * A conferência é um laço simples: uma expressão regular estourava a pilha do Chrome com textos de
+ * vários megabytes, como o conteúdo de um backup (achado na medição da I-08).
+ */
 export function fromBase64Strict(text: string): Uint8Array<ArrayBuffer> | null {
-  return BASE64.test(text) ? fromBase64(text) : null;
+  if (text.length % 4 !== 0) return null;
+  let fim = text.length;
+  if (text.endsWith('==')) fim -= 2;
+  else if (text.endsWith('=')) fim -= 1;
+  for (let i = 0; i < fim; i++) if (!base64Char(text.charCodeAt(i))) return null;
+  return fromBase64(text);
 }

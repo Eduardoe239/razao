@@ -52,7 +52,6 @@ function AccountList({
             <button
               type="button"
               className="rz-row-btn"
-              aria-label={`${item.account.name}: abrir detalhes`}
               onClick={() => {
                 onSelect(item);
               }}

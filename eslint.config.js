@@ -115,7 +115,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['*.config.ts', 'vitest.setup.ts', 'e2e/**/*.ts', 'bench/**/*.ts'],
+    files: ['*.config.ts', 'vitest.setup.ts', 'e2e/**/*.ts'],
     extends: [...tseslint.configs.strict],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },

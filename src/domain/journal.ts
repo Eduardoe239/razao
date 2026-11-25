@@ -12,6 +12,27 @@ function sameEntry(a: JournalEntry, b: JournalEntry): boolean {
 }
 
 /**
+ * Monta o diário a partir de lançamentos já gravados (abertura do cofre), numa passada só.
+ * Cada lançamento é validado como na gravação; repetido igual é ignorado, repetido diferente é conflito.
+ * Acrescentar um a um com appendOperation copiaria o diário inteiro a cada lançamento, e com 10 mil
+ * lançamentos o desbloqueio passava do orçamento de 2 s (medição da I-08).
+ */
+export function addLoadedEntries(
+  target: Map<string, JournalEntry>,
+  entries: readonly JournalEntry[],
+  accounts: AccountLookup,
+): void {
+  for (const e of entries) validateEntry(e, accounts);
+  for (const e of entries) {
+    const anterior = target.get(e.entryId);
+    if (anterior && !sameEntry(anterior, e)) {
+      throw new DomainError('OPERATION_CONFLICT', `O lançamento ${e.entryId} aparece com dois conteúdos.`);
+    }
+  }
+  for (const e of entries) target.set(e.entryId, e);
+}
+
+/**
  * Acrescenta os lançamentos de uma operação.
  * Repetir a mesma operação (clique duplo, recarga, reinício no meio) não grava nada de novo.
  * Uma operação repetida com conteúdo diferente é conflito e é recusada.

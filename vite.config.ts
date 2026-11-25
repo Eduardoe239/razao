@@ -13,5 +13,12 @@ export default defineConfig({
     sourcemap: false,
     // Fontes e ícones viram arquivos próprios com hash, nunca links externos.
     assetsInlineLimit: 0,
+    // O app e a página de medição de desempenho (Volume 09), cada um com o seu script.
+    rollupOptions: {
+      input: {
+        app: fileURLToPath(new URL('./index.html', import.meta.url)),
+        medicao: fileURLToPath(new URL('./medicao/index.html', import.meta.url)),
+      },
+    },
   },
 });

@@ -10,5 +10,7 @@ test-results/
 .env
 .env.*
 *.razao
+# Exceção: backups sintéticos dos testes de compatibilidade (senha de teste, nenhum dado real)
+!src/infra/backup/fixtures/*.razao
 *.tmp
 *.log

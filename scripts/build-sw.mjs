@@ -6,7 +6,8 @@ import { generateSW } from 'workbox-build';
 const { count, size, warnings } = await generateSW({
   globDirectory: 'dist',
   globPatterns: ['**/*.{html,js,css,woff2,png,ico,webmanifest}'],
-  globIgnores: ['sw.js'],
+  // A página de medição não faz parte do app: não fica guardada nem é servida pelo service worker.
+  globIgnores: ['sw.js', 'medicao/**', 'assets/medicao-*'],
   swDest: 'dist/sw.js',
   mode: 'production',
   sourcemap: false,
@@ -15,6 +16,7 @@ const { count, size, warnings } = await generateSW({
   clientsClaim: false,
   cleanupOutdatedCaches: true,
   navigateFallback: '/index.html',
+  navigateFallbackDenylist: [/^\/medicao\//],
   // Os arquivos de assets/ já têm hash no nome; não precisam de outro controle de versão.
   dontCacheBustURLsMatching: /^assets\//,
   maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,

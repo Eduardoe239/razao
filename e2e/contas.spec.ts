@@ -43,7 +43,7 @@ test.describe('contas e espaços', () => {
     await expect(lista.getByText(reais('150,00'))).toBeVisible();
     await expect(page.getByText(reais('9.369,35'))).toBeVisible();
 
-    await page.getByRole('button', { name: 'Banco Azul: abrir detalhes' }).click();
+    await page.getByRole('button', { name: /^Banco Azul / }).click();
     await page.getByRole('dialog').getByRole('button', { name: 'Ajustar saldo' }).click();
     const a = page.getByRole('dialog');
     await a.getByLabel('Saldo certo de hoje').fill('9.200,00');
@@ -53,7 +53,7 @@ test.describe('contas e espaços', () => {
     await expect(lista.getByText(reais('9.200,00'))).toBeVisible();
 
     // Conta com saldo não arquiva: primeiro o dinheiro sai dela.
-    await page.getByRole('button', { name: 'Carteira: abrir detalhes' }).click();
+    await page.getByRole('button', { name: /^Carteira / }).click();
     await page.getByRole('dialog').getByRole('button', { name: 'Arquivar conta' }).click();
     await expect(
       page.getByRole('dialog').getByText('Só dá para arquivar uma conta com saldo zero'),

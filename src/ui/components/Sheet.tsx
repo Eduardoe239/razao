@@ -18,7 +18,11 @@ export function Sheet({
   useEffect(() => {
     const dialogo = ref.current;
     const antes = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    if (dialogo && !dialogo.open) dialogo.showModal();
+    if (dialogo && !dialogo.open) {
+      dialogo.showModal();
+      // O navegador põe o foco no primeiro botão (Fechar); num formulário, o foco vai para o primeiro campo.
+      dialogo.querySelector<HTMLElement>('.rz-sheet-body :is(input, select, textarea)')?.focus();
+    }
     return () => {
       dialogo?.close();
       antes?.focus();

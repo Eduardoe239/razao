@@ -2,7 +2,7 @@
 // A cifra acontece antes da transação, porque o IndexedDB encerra a transação que espera outra coisa.
 // Dentro dela só há leituras de revisão e gravações; se algo mudou no meio, a gravação é recusada.
 import type { Journal } from '@/domain/journal';
-import { appendOperation, emptyJournal } from '@/domain/journal';
+import { addLoadedEntries, appendOperation, emptyJournal } from '@/domain/journal';
 import type { AccountLookup, JournalEntry, LedgerAccount } from '@/domain/ledger';
 import type { AuditInput } from './audit';
 import { chainEvent, verifyChain } from './audit';
@@ -144,6 +144,7 @@ export class VaultRepository {
         if (r.success) contas.set(r.data.id, r.data);
       }
     }
+    const diario = new Map<string, JournalEntry>();
     for (const [i, key] of pagKeys.entries()) {
       const rec = pagVals[i] as StoredRecord;
       try {
@@ -156,12 +157,13 @@ export class VaultRepository {
         const d = await digest(rec.sealed);
         // T-10: a página precisa ser a mesma que a auditoria registrou por último; versão antiga devolvida não passa.
         if (esperado.get(key[1]) !== d) throw new Error('página diferente da registrada na auditoria');
-        for (const e of page.entries) state.journal = appendOperation(state.journal, [e], contas);
+        addLoadedEntries(diario, page.entries, contas);
         state.pages.set(key[1], { page, rev: rec.rev, digest: d });
       } catch (erro) {
         await this.problem('journal', key, rec, motivo(erro));
       }
     }
+    state.journal = diario;
     return state;
   }
 

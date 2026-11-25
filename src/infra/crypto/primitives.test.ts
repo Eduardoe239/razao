@@ -234,5 +234,17 @@ describe('[NFR-003] utilitários de bytes', () => {
     expect(fromBase64Strict('a*b=')).toBeNull();
     expect(fromBase64Strict('abc')).toBeNull();
     expect(fromUtf8(utf8('ção'))).toBe('ção');
+    expect(fromBase64Strict('ab=c')).toBeNull();
+    expect(fromBase64Strict('a===')).toBeNull();
+    expect(fromBase64Strict('')?.length).toBe(0);
+  });
+
+  it('base64 de vários megabytes, como um backup grande, é conferido sem estourar a pilha', () => {
+    // Regressão da I-08: a expressão regular antiga estourava a pilha do Chrome com textos grandes.
+    const grande = new Uint8Array(6_000_000);
+    for (let i = 0; i < grande.length; i += 65_536) crypto.getRandomValues(grande.subarray(i, i + 65_536));
+    const texto = toBase64(grande);
+    expect(fromBase64Strict(texto)?.length).toBe(grande.length);
+    expect(fromBase64Strict(`${texto.slice(0, -4)}*AAA`)).toBeNull();
   });
 });

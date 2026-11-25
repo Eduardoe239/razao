@@ -27,9 +27,12 @@ for (const arquivo of textos) {
   }
 }
 
-// O JavaScript inicial é o que o index.html carrega direto.
 const html = await readFile(path.join(pasta, 'index.html'), 'utf8');
-const iniciais = [...html.matchAll(/<script[^>]+src="\/?([^"]+\.js)"/g)].map((m) => m[1]);
+// O JavaScript inicial é o que o index.html carrega direto: os scripts e os módulos pré-carregados.
+const iniciais = [
+  ...html.matchAll(/<script[^>]+src="\/?([^"]+\.js)"/g),
+  ...html.matchAll(/<link[^>]+rel="modulepreload"[^>]+href="\/?([^"]+\.js)"/g),
+].map((m) => m[1]);
 let total = 0;
 for (const rel of iniciais) total += tamanhoComprimido(await readFile(path.join(pasta, rel)));
 const kb = (total / 1024).toFixed(1);

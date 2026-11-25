@@ -1,0 +1,33 @@
+[
+  {
+    "id": "01a42f4f-7200-748e-87ae-6ccbbd7a050e",
+    "kind": "PF",
+    "name": "Pessoal",
+    "total": 127806,
+    "contas": [
+      {
+        "id": "01a42f4f-720b-710c-8bc6-0756f54640fc",
+        "name": "Banco Exemplo",
+        "saldo": 120806
+      },
+      {
+        "id": "01a42f4f-720e-7854-b4b1-b3cbc06a7be0",
+        "name": "Carteira",
+        "saldo": 7000
+      }
+    ]
+  },
+  {
+    "id": "01a42f4f-7205-788c-b7e6-769b7d66513c",
+    "kind": "PJ",
+    "name": "Exemplo Serviços ME",
+    "total": 987654,
+    "contas": [
+      {
+        "id": "01a42f4f-7211-7aca-96db-f4553e88259c",
+        "name": "Conta da empresa",
+        "saldo": 987654
+      }
+    ]
+  }
+]
