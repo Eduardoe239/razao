@@ -76,7 +76,7 @@
   --negative-soft: #FCEBE9;
   --warning: #8F5600;
   --warning-soft: #FFF4E0;
-  --workspace-pf: {primary};
+  --workspace-pf: var(--primary);
   --workspace-pj: #0F6E76;
   --workspace-pj-soft: #E3F3F4;
   --focus: #0052D6;
@@ -115,7 +115,7 @@
   --negative-soft: #3A1714;
   --warning: #F2B34A;
   --warning-soft: #3A2A0B;
-  --workspace-pf: {primary};
+  --workspace-pf: var(--primary);
   --workspace-pj: #45C2C9;
   --workspace-pj-soft: #0F2F33;
   --focus: #5AA2FF;
@@ -155,7 +155,7 @@
     --negative-soft: #3A1714;
     --warning: #F2B34A;
     --warning-soft: #3A2A0B;
-    --workspace-pf: {primary};
+    --workspace-pf: var(--primary);
     --workspace-pj: #45C2C9;
     --workspace-pj-soft: #0F2F33;
     --focus: #5AA2FF;

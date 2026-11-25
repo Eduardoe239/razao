@@ -20,6 +20,13 @@ describe('[SEC-03] verificação de endereços externos no build', () => {
     expect(urlsExternas(texto)).toEqual([]);
   });
 
+  it('ignora os identificadores do Zod, mas não outros endereços parecidos', () => {
+    const texto =
+      '"https://json-schema.org/draft/2020-12/schema" http://json-schema.org/draft-07/schema# `http://[${e}]`';
+    expect(urlsExternas(texto)).toEqual([]);
+    expect(urlsExternas('https://json-schema.org/draft-07/schema/../x http://[::1]/coleta')).toHaveLength(2);
+  });
+
   it('não repete o mesmo endereço', () => {
     expect(urlsExternas('https://a.exemplo.com https://a.exemplo.com')).toHaveLength(1);
   });

@@ -6,11 +6,14 @@ const origem = new URL('../src/ui/theme/tokens.json', import.meta.url);
 const destino = new URL('../src/ui/theme/tokens.css', import.meta.url);
 const t = JSON.parse(await readFile(origem, 'utf8'));
 
+// Um valor "{primary}" aponta para outro token: vira var(--primary), nunca o texto literal.
+const valor = (v) => (/^\{[a-z0-9-]+\}$/.test(v) ? `var(--${v.slice(1, -1)})` : v);
+
 const claro = [];
 const escuro = [];
 for (const c of t.color.tokens) {
-  claro.push(`  --${c.name}: ${c.value.light};`);
-  escuro.push(`  --${c.name}: ${c.value.dark};`);
+  claro.push(`  --${c.name}: ${valor(c.value.light)};`);
+  escuro.push(`  --${c.name}: ${valor(c.value.dark)};`);
 }
 for (const s of t.shadow.tokens) {
   claro.push(`  --${s.name}: ${s.value.light};`);

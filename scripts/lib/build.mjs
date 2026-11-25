@@ -2,11 +2,15 @@
 import { gzipSync } from 'node:zlib';
 
 // Endereços que aparecem como texto dentro de bibliotecas, mas nunca são carregados:
-// nomes de espaço do SVG/XML e o link de explicação das mensagens de erro do React.
+// nomes de espaço do SVG/XML, o link de explicação das mensagens de erro do React e, no Zod,
+// o identificador "$schema" do JSON Schema e o endereço montado só para validar um IPv6 com new URL().
+// Nenhum deles é buscado; a CSP (connect-src 'self') bloquearia de qualquer forma.
 export const TEXTOS_PERMITIDOS = [
   /^http:\/\/www\.w3\.org\//,
   /^https:\/\/react\.dev\/errors\//,
   /^https:\/\/reactjs\.org\/docs\/error-decoder/,
+  /^https?:\/\/json-schema\.org\/draft(-04|-07|\/2020-12)\/schema#?$/,
+  /^http:\/\/\[\$\{[a-zA-Z_$][\w$]*\}\]$/,
 ];
 
 const PADRAO_URL = /\bhttps?:\/\/[^\s"'`)<>\\]+/g;

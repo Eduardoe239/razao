@@ -1,0 +1,240 @@
+/* Telas de entrada (primeiro acesso, desbloqueio, cofre sumido), no formato das telas aprovadas (D-035). */
+.rz-splash {
+  min-height: 100%;
+  background: var(--bg);
+}
+.rz-auth {
+  min-height: 100%;
+  display: flex;
+  justify-content: center;
+  background: var(--bg);
+  color: var(--ink);
+}
+.rz-auth-col {
+  width: 100%;
+  max-width: 440px;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--space-6);
+}
+.rz-auth-center {
+  justify-content: center;
+  gap: var(--space-6);
+}
+.rz-ob-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 56px;
+  margin: 0 calc(-1 * var(--space-3));
+  flex: none;
+}
+.rz-ob-back {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+}
+.rz-ob-progress {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rz-ob-progress-label {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  color: var(--ink-subtle);
+}
+.rz-ob-bar {
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-subtle);
+  overflow: hidden;
+}
+.rz-ob-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--primary);
+  transition: width var(--dur-slow) var(--ease-out);
+}
+.rz-ob-stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding-top: var(--space-4);
+}
+.rz-ob-foot {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4) 0 var(--space-8);
+}
+.rz-ob-title {
+  margin: 0;
+  font-size: var(--text-title-size);
+  line-height: var(--text-title-line);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.rz-ob-hero {
+  margin: 0;
+  font-size: 28px;
+  line-height: 36px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.rz-ob-lead {
+  margin: 0;
+  color: var(--ink-muted);
+}
+.rz-ob-intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.rz-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+}
+.rz-points {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.rz-points li {
+  display: flex;
+  gap: 14px;
+  color: var(--ink-muted);
+}
+.rz-points svg {
+  flex: none;
+  color: var(--primary);
+  margin-top: 1px;
+}
+.rz-points strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.rz-code {
+  padding: var(--space-5);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  text-align: center;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 18px;
+  line-height: 24px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  user-select: all;
+}
+.rz-two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+.rz-done {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-4);
+  text-align: center;
+}
+.rz-done-mark {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--positive-soft);
+  color: var(--positive);
+  animation: rz-enter 420ms var(--ease-out) both;
+}
+.rz-done p {
+  max-width: 320px;
+}
+.rz-steps {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--ink-muted);
+}
+.rz-steps strong {
+  color: var(--ink);
+}
+.rz-unlock {
+  padding-top: 12vh;
+  padding-bottom: var(--space-8);
+  gap: var(--space-10);
+}
+.rz-unlock-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  text-align: center;
+}
+.rz-unlock-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.rz-link {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--primary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+.rz-link:hover {
+  text-decoration: underline;
+}
+.rz-note {
+  margin-top: auto;
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.rz-note svg {
+  flex: none;
+  color: var(--primary);
+  margin-top: 1px;
+}
+.rz-note p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--ink-muted);
+}
+
+.rz-two .rz-btn {
+  padding: 0 var(--space-2);
+  white-space: nowrap;
+}

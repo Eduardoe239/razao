@@ -1,0 +1,245 @@
+/* Peças que o bundle aprovado não tinha, no mesmo padrão de tokens, raios e movimento (Volume 08). */
+.rz-btn {
+  justify-content: center;
+}
+.rz-btn-lg {
+  height: 48px;
+  font-size: 15px;
+}
+.rz-btn-block {
+  width: 100%;
+}
+.rz-btn-ghost:hover {
+  background: var(--primary-soft);
+}
+.rz-btn-danger:hover {
+  background: var(--negative-soft);
+}
+.rz-btn[aria-busy='true'] {
+  opacity: 0.8;
+  cursor: progress;
+}
+.rz-btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.rz-spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: rz-spin 700ms linear infinite;
+}
+@keyframes rz-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rz-field {
+  min-width: 0;
+}
+.rz-input-wrap {
+  position: relative;
+  display: flex;
+}
+.rz-input {
+  width: 100%;
+  height: 48px;
+  font-size: 16px;
+}
+.rz-input-with-btn {
+  padding-right: 52px;
+}
+.rz-input-btn {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.rz-input-btn:hover {
+  color: var(--ink);
+}
+.rz-input-btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.rz-meter {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 4px;
+}
+.rz-meter span {
+  height: 4px;
+  border-radius: var(--radius-pill);
+  transition: background-color var(--dur-base) var(--ease-out);
+}
+
+.rz-choice {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  width: 100%;
+  min-height: 56px;
+  padding: var(--space-4);
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+.rz-choice:active {
+  transform: scale(0.99);
+}
+.rz-choice[aria-checked='true'] {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+.rz-choice:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.rz-choice-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rz-choice-title {
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 600;
+}
+.rz-choice-sub {
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--ink-muted);
+}
+.rz-radio {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  border-radius: 50%;
+  border: 2px solid var(--line-control);
+  transition:
+    border-width var(--dur-fast),
+    border-color var(--dur-fast);
+}
+.rz-choice[aria-checked='true'] .rz-radio {
+  border: 6px solid var(--primary);
+}
+.rz-check-card {
+  align-items: center;
+}
+.rz-check-card .rz-choice-title {
+  font-weight: 500;
+}
+.rz-checkbox {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--line-control);
+  color: var(--on-primary);
+  transition:
+    background-color var(--dur-fast),
+    border-color var(--dur-fast);
+}
+.rz-checkbox svg {
+  opacity: 0;
+  transition: opacity var(--dur-fast);
+}
+.rz-check-card[aria-checked='true'] .rz-checkbox {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+.rz-check-card[aria-checked='true'] .rz-checkbox svg {
+  opacity: 1;
+}
+
+.rz-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.rz-chip {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line-control);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+.rz-chip[aria-checked='true'] {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.rz-chip:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.rz-fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.rz-seg-thumb {
+  transition: none;
+}
+.rz-seg-thumb.rz-seg-ready {
+  transition:
+    transform var(--dur-base) var(--ease-out),
+    width var(--dur-base) var(--ease-out),
+    opacity var(--dur-fast);
+}
+.rz-seg-btn {
+  min-height: 32px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.rz-fieldset legend {
+  padding: 0;
+  margin-bottom: 6px;
+}
