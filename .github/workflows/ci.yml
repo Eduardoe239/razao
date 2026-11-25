@@ -20,7 +20,7 @@ jobs:
   qualidade:
     name: Tipos, lint, testes e build
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -32,6 +32,9 @@ jobs:
       - run: npm run lint
       - run: npm run format
       - run: npm run test:coverage
+        env:
+          # D-015: 1.000 casos por invariante em cada push; 100.000 no teste noturno.
+          PROP_RUNS: ${{ github.event_name == 'schedule' && '100000' || '1000' }}
       - run: npm run build
       - run: npm run check:build
       - run: npm run rastreio

@@ -96,14 +96,26 @@ export default tseslint.config(
     },
   },
   {
-    files: ['src/**/*.test.{ts,tsx}'],
+    files: ['src/**/*.test.{ts,tsx}', 'src/domain/testing/**/*.ts'],
     rules: {
       // Os testes de propriedade usam semente fixa; o resto das regras continua valendo.
       'no-restricted-syntax': ['error', ...proibidosSeguranca],
+      // Testes podem usar o Vitest em qualquer camada.
+      'razao/camadas': [
+        'error',
+        {
+          raizSrc: path.join(raiz, 'src'),
+          pacotes: Object.fromEntries(
+            Object.entries(pacotesPorCamada).map(([c, p]) => [c, [...p, 'vitest']]),
+          ),
+        },
+      ],
+      // Em teste, "() => funcao()" para checar se lança erro é o jeito mais claro.
+      '@typescript-eslint/no-confusing-void-expression': 'off',
     },
   },
   {
-    files: ['*.config.ts', 'e2e/**/*.ts', 'bench/**/*.ts'],
+    files: ['*.config.ts', 'vitest.setup.ts', 'e2e/**/*.ts', 'bench/**/*.ts'],
     extends: [...tseslint.configs.strict],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
