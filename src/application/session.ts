@@ -12,7 +12,20 @@ import { ENTITY, accountSchema, workspaceSchema } from './model';
 import { accountsOf, workspaceOf } from './session-read';
 import type { OpsContext, WorkspaceFootprint } from './account-ops';
 import * as ops from './account-ops';
-import type { Clock, IdSource, SessionPort, StorageIssue, StoredItem } from './ports';
+import type { BackupFile, BackupPreview } from './backup';
+import { createBackup, openBackup, restoreBackup } from './backup';
+import type {
+  BackupFilePort,
+  BackupScope,
+  Clock,
+  IdSource,
+  RestorePoint,
+  SessionPort,
+  StorageIssue,
+  StoredItem,
+} from './ports';
+import type { BackupStatus, Prefs } from './reminder';
+import { PREF, backupStatus, noteChange } from './reminder';
 
 export interface AccountView {
   readonly account: Account;
@@ -55,12 +68,99 @@ function domainSafe<T>(fn: () => T): T {
 
 const ORDEM: Record<WorkspaceKind, number> = { PF: 0, PJ: 1 };
 
+export interface SessionExtras {
+  readonly file: BackupFilePort;
+  readonly prefs: Prefs;
+}
+
+/** Envolve a porta para anotar cada gravação (lembrete de backup, PERS-04). */
+function anotando(port: SessionPort, prefs: Prefs, clock: Clock): SessionPort {
+  const anotar = <T>(p: Promise<T>) =>
+    p.then((r) => {
+      noteChange(prefs, clock.nowIso());
+      return r;
+    });
+  return {
+    get schemaVersion() {
+      return port.schemaVersion;
+    },
+    get safeMode() {
+      return port.safeMode;
+    },
+    issues: () => port.issues(),
+    workspaceIds: () => port.workspaceIds(),
+    load: (id) => port.load(id),
+    commit: (id, op) => anotar(port.commit(id, op)),
+    deleteWorkspace: (id) => anotar(port.deleteWorkspace(id)),
+    exportWorkspaces: (ids) => port.exportWorkspaces(ids),
+    importWorkspaces: (d, m, s) => anotar(port.importWorkspaces(d, m, s)),
+    restorePoints: () => port.restorePoints(),
+    undoRestore: (s, b) => anotar(port.undoRestore(s, b)),
+    close: () => {
+      port.close();
+    },
+  };
+}
+
 export class VaultSession {
+  private readonly port: SessionPort;
+
   constructor(
-    private readonly port: SessionPort,
+    port: SessionPort,
     private readonly clock: Clock,
     private readonly ids: IdSource,
-  ) {}
+    private readonly extras: SessionExtras,
+  ) {
+    this.port = anotando(port, extras.prefs, clock);
+  }
+
+  private get backupDeps() {
+    return {
+      file: this.extras.file,
+      clock: this.clock,
+      ids: this.ids,
+      onBackupDone: (iso: string) => {
+        this.extras.prefs.setItem(PREF.lastBackup, iso);
+      },
+    };
+  }
+
+  /** BKP-001 e PERS-05. */
+  async createBackup(scope: BackupScope, password: string, repeat: string): Promise<BackupFile> {
+    return createBackup(this.backupDeps, this.port, {
+      scope,
+      password,
+      repeat,
+      allWorkspaceIds: await this.port.workspaceIds(),
+    });
+  }
+
+  /** BKP-002. */
+  openBackup(text: string, password: string): Promise<BackupPreview> {
+    return openBackup(this.extras.file, text, password);
+  }
+
+  /** BKP-003. */
+  restoreBackup(preview: BackupPreview): Promise<void> {
+    return restoreBackup(this.backupDeps, this.port, preview);
+  }
+
+  restorePoints(): Promise<RestorePoint[]> {
+    return this.port.restorePoints();
+  }
+
+  undoRestore(snapshotId: string): Promise<void> {
+    return this.port.undoRestore(snapshotId, this.ids.newId());
+  }
+
+  /** PERS-02 e PERS-04: data do último backup e lembrete. */
+  backupStatus(persisted: boolean): BackupStatus {
+    return backupStatus(this.extras.prefs, this.clock.nowMs(), persisted);
+  }
+
+  setReminderDays(days: number): void {
+    this.extras.prefs.setItem(PREF.intervalDays, String(days));
+  }
 
   get safeMode(): boolean {
     return this.port.safeMode;

@@ -161,6 +161,7 @@ describe('cofre e espaços pela aplicação', () => {
     const kv = {
       getItem: (k: string) => local.get(k) ?? null,
       setItem: (k: string, v: string) => local.set(k, v),
+      removeItem: (k: string) => local.delete(k),
     };
     const vault = createVaultPort({
       dbName: `razao-persist-${String(proximo())}`,

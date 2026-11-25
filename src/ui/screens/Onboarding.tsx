@@ -50,6 +50,8 @@ export function Onboarding(props: {
   session?: VaultSession;
   onOpen: (session: VaultSession, workspaces: readonly Workspace[]) => void;
   onLock?: () => void;
+  /** Primeiro acesso em aparelho novo: restaurar um backup em vez de começar do zero. */
+  onRestore?: () => void;
 }) {
   const app = useRazao();
   const safari = useMemo(() => isSafariOutsideApp(navigator.userAgent, modoApp()), []);
@@ -262,6 +264,11 @@ export function Onboarding(props: {
           <Button type="submit" variant="primary" size="lg" block busy={busy} disabled={bloqueado}>
             {busy && etapa === 'senha' ? 'Criando o cofre…' : CTA[etapa]}
           </Button>
+          {props.onRestore && etapa === 'boas-vindas' ? (
+            <button type="button" className="rz-link" onClick={props.onRestore}>
+              Já tenho um backup · restaurar
+            </button>
+          ) : null}
           {props.onLock && etapa === 'espacos' ? (
             <button type="button" className="rz-link" onClick={props.onLock}>
               Bloquear e sair

@@ -17,6 +17,7 @@ type Fase =
   | { readonly t: 'erro'; readonly msg: string }
   | { readonly t: 'novo' }
   | { readonly t: 'sumiu' }
+  | { readonly t: 'restaurar' }
   | { readonly t: 'bloqueado'; readonly aviso?: string }
   | { readonly t: 'aberto'; readonly session: VaultSession; readonly workspaces: readonly Workspace[] };
 
@@ -95,16 +96,40 @@ export function App() {
           </div>
         </main>
       );
+    case 'restaurar':
+      return (
+        <VaultMissing
+          onOpen={(s, ws) => {
+            // Depois de restaurar, a pessoa começa pelo Início, não pela última tela antes do problema.
+            window.location.hash = '';
+            setFase({ t: 'aberto', session: s, workspaces: ws });
+          }}
+          onBack={() => {
+            setFase({ t: 'novo' });
+          }}
+        />
+      );
     case 'novo':
       return (
         <Onboarding
+          onRestore={() => {
+            setFase({ t: 'restaurar' });
+          }}
           onOpen={(s, ws) => {
             setFase({ t: 'aberto', session: s, workspaces: ws });
           }}
         />
       );
     case 'sumiu':
-      return <VaultMissing />;
+      return (
+        <VaultMissing
+          onOpen={(s, ws) => {
+            // Depois de restaurar, a pessoa começa pelo Início, não pela última tela antes do problema.
+            window.location.hash = '';
+            setFase({ t: 'aberto', session: s, workspaces: ws });
+          }}
+        />
+      );
     case 'bloqueado':
       return (
         <Unlock
@@ -136,6 +161,11 @@ export function App() {
             bloquear();
           }}
           onWorkspacesChanged={() => recarregar(fase.session)}
+          onWiped={() => {
+            window.location.hash = '';
+            setFase({ t: 'carregando' });
+            setTentativa((n) => n + 1);
+          }}
         />
       );
   }

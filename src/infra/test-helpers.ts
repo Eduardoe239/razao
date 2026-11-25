@@ -6,6 +6,7 @@ import type { VaultSession } from '@/application/session';
 import { parseCivilDate } from '@/domain/civil-date';
 import { newArgon2Params } from './crypto/kdf';
 import { uuidv7 } from './ids';
+import { createBackupFilePort } from './backup/file';
 import { createVaultPort } from './vault-adapter';
 
 let n = 0;
@@ -23,6 +24,7 @@ export function montar(local = new Map<string, string>(), dbName = `razao-app-${
   const kv = {
     getItem: (k: string) => local.get(k) ?? null,
     setItem: (k: string, v: string) => local.set(k, v),
+    removeItem: (k: string) => local.delete(k),
   };
   const vault = createVaultPort({
     dbName,
@@ -32,8 +34,9 @@ export function montar(local = new Map<string, string>(), dbName = `razao-app-${
     kdf: { kdf: () => newArgon2Params({ memoryKiB: 256 }) },
   });
   let seq = 0;
-  const app = createRazaoApp({ vault, clock, ids: { newId: () => uuidv7(ms + seq++) } });
-  return { app, vault, local, dbName, avancar: (s: number) => (ms += s * 1000) };
+  const file = createBackupFilePort({ kdf: () => newArgon2Params({ memoryKiB: 256 }) });
+  const app = createRazaoApp({ vault, clock, ids: { newId: () => uuidv7(ms + seq++) }, file, prefs: kv });
+  return { app, vault, file, local, dbName, avancar: (s: number) => (ms += s * 1000) };
 }
 
 /** Cofre aberto com um espaço Pessoal, para os testes que não tratam da criação. */

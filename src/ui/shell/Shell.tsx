@@ -8,9 +8,12 @@ import { Alert, Badge, Button } from '../components/ds';
 import { Icon } from '../components/Icon';
 import { Toast } from '../components/Sheet';
 import { Tabs, WorkspaceSwitch } from '../components/Tabs';
+import { BackupPage } from '../backup/BackupPage';
+import { useRazao } from '../context';
 import { Espacos } from './Espacos';
 import type { Route } from './nav';
-import { CONFIG, areaOf, parseRoute, routeHash } from './nav';
+import type { StorageStatus } from '@/application/ports';
+import { BACKUP, CONFIG, CONFIG_SUBS, areaOf, parseRoute, routeHash } from './nav';
 import { PageBody } from './Pages';
 import { SideNav } from './SideNav';
 
@@ -21,8 +24,23 @@ export function Shell(p: {
   workspaces: readonly Workspace[];
   onLock: () => void;
   onWorkspacesChanged: () => Promise<void>;
+  onWiped: () => void;
 }) {
   const { session, workspaces, onLock, onWorkspacesChanged } = p;
+  const app = useRazao();
+  const [armazenamento, setArmazenamento] = useState<StorageStatus | null>(null);
+  useEffect(() => {
+    let vivo = true;
+    app.storageStatus().then(
+      (s) => {
+        if (vivo) setArmazenamento(s);
+      },
+      () => undefined,
+    );
+    return () => {
+      vivo = false;
+    };
+  }, [app]);
   // Só espaços ativos entram no seletor; os arquivados ficam em Espaços (COF-007).
   const ativos = workspaces.filter((w) => !w.archived);
   const [escolhido, setEscolhido] = useState(() => ativos[0]?.id ?? '');
@@ -92,7 +110,8 @@ export function Shell(p: {
 
   const config = rota.area === 'config';
   const area = areaOf(rota.area);
-  const subs = config ? [] : area.subs(kind);
+  const subs = config ? CONFIG_SUBS : area.subs(kind);
+  const tituloConfig = CONFIG_SUBS.find((s) => s.id === rota.sub)?.label ?? 'Espaços';
   const tom = kind === 'PJ' ? 'pj' : 'pf';
   const opcoes = ativos.map((w) => ({
     id: w.id,
@@ -125,6 +144,15 @@ export function Shell(p: {
           <Button
             variant="ghost"
             className="rz-icon-btn rz-only-mobile"
+            aria-label="Backup e segurança"
+            icon="shield"
+            onClick={() => {
+              navegar(BACKUP);
+            }}
+          />
+          <Button
+            variant="ghost"
+            className="rz-icon-btn rz-only-mobile"
             aria-label="Espaços"
             icon="sliders"
             onClick={() => {
@@ -143,14 +171,14 @@ export function Shell(p: {
         <main className="rz-page" key={`${wsId}/${rota.area}/${rota.sub}`}>
           <div className="rz-page-head rz-enter">
             <h1 ref={titulo} tabIndex={-1} className="rz-page-title">
-              {config ? 'Espaços' : area.label}
+              {config ? tituloConfig : area.label}
             </h1>
-            <p className="rz-page-q">{config ? 'Pessoal e negócio neste aparelho' : area.question}</p>
+            <p className="rz-page-q">{config ? 'Configurações deste aparelho' : area.question}</p>
           </div>
           {subs.length > 1 ? (
-            <div className="rz-mobile-tabs">
+            <div className={config ? 'rz-config-tabs' : 'rz-mobile-tabs'}>
               <Tabs
-                label={`Seções de ${area.label}`}
+                label={config ? 'Configurações' : `Seções de ${area.label}`}
                 items={subs}
                 value={rota.sub}
                 onChange={(id) => {
@@ -165,7 +193,18 @@ export function Shell(p: {
               gravações ficam bloqueadas até a recuperação.
             </Alert>
           ) : null}
-          {config ? <Espacos session={session} workspaces={workspaces} onChanged={mudou} /> : null}
+          {config && rota.sub === 'espacos' ? (
+            <Espacos session={session} workspaces={workspaces} onChanged={mudou} />
+          ) : null}
+          {config && rota.sub === 'backup' ? (
+            <BackupPage
+              session={session}
+              workspaces={workspaces}
+              storage={armazenamento}
+              onChanged={mudou}
+              onWiped={p.onWiped}
+            />
+          ) : null}
           {!config && carga.t === 'carregando' ? (
             <div className="rz-card" aria-busy="true" aria-label="Carregando" style={{ minHeight: 160 }} />
           ) : null}
@@ -184,7 +223,14 @@ export function Shell(p: {
             </Alert>
           ) : null}
           {!config && visivel ? (
-            <PageBody route={rota} view={visivel} navigate={navegar} session={session} onChanged={mudou} />
+            <PageBody
+              route={rota}
+              view={visivel}
+              navigate={navegar}
+              session={session}
+              onChanged={mudou}
+              reminder={session.backupStatus(armazenamento?.persisted ?? false).reminder}
+            />
           ) : null}
         </main>
 

@@ -4,7 +4,7 @@ import type { WorkspaceKind } from '@/application/model';
 import { Button } from '../components/ds';
 import { Icon } from '../components/Icon';
 import type { Route } from './nav';
-import { AREAS, CONFIG } from './nav';
+import { AREAS, BACKUP, CONFIG } from './nav';
 
 export function SideNav(p: {
   kind: WorkspaceKind;
@@ -64,9 +64,20 @@ export function SideNav(p: {
       <div className="rz-side-foot">
         <Button
           variant="ghost"
+          icon="shield"
+          block
+          aria-current={route.area === 'config' && route.sub === 'backup' ? 'page' : undefined}
+          onClick={() => {
+            navigate(BACKUP);
+          }}
+        >
+          Backup e segurança
+        </Button>
+        <Button
+          variant="ghost"
           icon="sliders"
           block
-          aria-current={route.area === 'config' ? 'page' : undefined}
+          aria-current={route.area === 'config' && route.sub === 'espacos' ? 'page' : undefined}
           onClick={() => {
             navigate(CONFIG);
           }}

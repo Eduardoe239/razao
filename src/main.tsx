@@ -6,6 +6,7 @@ import { createRoot } from 'react-dom/client';
 import { createRazaoApp } from './application/app';
 import { browserClock } from './infra/clock';
 import { uuidv7 } from './infra/ids';
+import { createBackupFilePort } from './infra/backup/file';
 import { createVaultPort } from './infra/vault-adapter';
 import { App } from './ui/App';
 import { AppContext } from './ui/context';
@@ -28,6 +29,8 @@ const app = createRazaoApp({
   }),
   clock: browserClock,
   ids: { newId: () => uuidv7(Date.now()) },
+  file: createBackupFilePort(),
+  prefs: window.localStorage,
 });
 
 createRoot(raiz).render(

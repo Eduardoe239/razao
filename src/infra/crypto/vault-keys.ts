@@ -39,14 +39,16 @@ function recoverySecret(input: string): string {
   return code;
 }
 
-async function wrap(dek: CryptoKey, secret: string, kdf: KdfParams): Promise<KeySlot> {
+/** Embrulha uma chave com a KEK derivada do segredo. Também usado pelo arquivo de backup. */
+export async function wrap(dek: CryptoKey, secret: string, kdf: KdfParams): Promise<KeySlot> {
   assertWriteKdfParams(kdf);
   const kek = await deriveWrappingKey(secret, kdf);
   const embrulhada = await crypto.subtle.wrapKey('raw', dek, kek, 'AES-KW');
   return { kdf, wrappedDek: toBase64(new Uint8Array(embrulhada)) };
 }
 
-async function unwrap(slot: KeySlot, secret: string, extractable: boolean): Promise<CryptoKey> {
+/** Desembrulha; segredo errado vira WRONG_SECRET, nunca uma chave errada (AES-KW confere a integridade). */
+export async function unwrap(slot: KeySlot, secret: string, extractable: boolean): Promise<CryptoKey> {
   const embrulhada = fromBase64Strict(slot.wrappedDek);
   if (embrulhada?.length !== WRAPPED_BYTES)
     throw new VaultError('HEADER_INVALID', 'Chave embrulhada inválida.');
