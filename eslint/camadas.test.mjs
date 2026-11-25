@@ -70,7 +70,9 @@ describe('[NFR-013] fronteiras entre camadas', () => {
   });
 });
 
-describe('[SEC-04] código proibido é barrado pela configuração do projeto', () => {
+// O ESLint com regras tipadas carrega o projeto inteiro na primeira análise; com a cobertura ligada, na CI,
+// isso passa dos 5 s padrão do Vitest à medida que o código cresce. O limite aqui é o do carregamento, não do teste.
+describe('[SEC-04] código proibido é barrado pela configuração do projeto', { timeout: 60_000 }, () => {
   const eslint = new ESLint({ cwd: raiz });
   const casos = [
     ['eval', "eval('1+1');"],
