@@ -20,15 +20,23 @@ export interface ActivityState {
   readonly autoLockMinutes: number;
 }
 
-/** COF-002: o cofre bloqueia por inatividade ou por aba oculta tempo demais. O instante "agora" vem de fora. */
+/**
+ * COF-002: o cofre bloqueia por inatividade ou por aba oculta tempo demais. O instante "agora" vem de fora
+ * e deve ser de relógio monotônico (performance.now). Na dúvida, bloqueia: valor inválido ou relógio que
+ * voltou no tempo contam como tempo esgotado (revisão da cripto, B6).
+ */
 export function shouldLock(state: ActivityState, nowMs: number): boolean {
   ensure(
     validAutoLockMinutes(state.autoLockMinutes),
     'OPERATION_INVALID',
     'Tempo de bloqueio fora de 1 a 30 minutos.',
   );
-  if (nowMs - state.lastActivityMs >= state.autoLockMinutes * 60_000) return true;
-  return state.hiddenSinceMs !== null && nowMs - state.hiddenSinceMs >= HIDDEN_TAB_LOCK_MS;
+  const esgotou = (desde: number, limite: number) => {
+    const passou = nowMs - desde;
+    return !(passou >= 0 && passou < limite);
+  };
+  if (esgotou(state.lastActivityMs, state.autoLockMinutes * 60_000)) return true;
+  return state.hiddenSinceMs !== null && esgotou(state.hiddenSinceMs, HIDDEN_TAB_LOCK_MS);
 }
 
 /**

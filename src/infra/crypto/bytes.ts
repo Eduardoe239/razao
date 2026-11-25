@@ -29,3 +29,10 @@ export function randomBytes(length: number): Uint8Array<ArrayBuffer> {
 export function wipe(bytes: Uint8Array): void {
   bytes.fill(0);
 }
+
+const BASE64 = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+
+/** Base64 conferido antes de decodificar; texto inválido vira null, nunca exceção genérica. */
+export function fromBase64Strict(text: string): Uint8Array<ArrayBuffer> | null {
+  return BASE64.test(text) ? fromBase64(text) : null;
+}

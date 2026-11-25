@@ -29,6 +29,13 @@ describe('[COF-002] bloqueio automático', () => {
     expect(() => shouldLock({ ...base, autoLockMinutes: 0 }, 0)).toThrow(DomainError);
   });
 
+  it('na dúvida, bloqueia: valor inválido ou relógio que voltou no tempo', () => {
+    expect(shouldLock(base, Number.NaN)).toBe(true);
+    expect(shouldLock({ ...base, lastActivityMs: Number.NaN }, 0)).toBe(true);
+    expect(shouldLock({ ...base, lastActivityMs: 10_000 }, 5_000)).toBe(true);
+    expect(shouldLock({ ...base, hiddenSinceMs: Number.NaN }, 1000)).toBe(true);
+  });
+
   it('aba oculta por 5 minutos bloqueia mesmo com bloqueio configurado para 30', () => {
     const oculta = { lastActivityMs: 0, hiddenSinceMs: 1000, autoLockMinutes: 30 };
     expect(shouldLock(oculta, 1000 + HIDDEN_TAB_LOCK_MS - 1)).toBe(false);

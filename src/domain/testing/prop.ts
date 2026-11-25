@@ -82,3 +82,28 @@ export function forAll(name: string, property: (rng: Rng, index: number) => void
     }
   }
 }
+
+/** Igual ao forAll, para propriedades assíncronas (cripto). Roda os casos um depois do outro. */
+export async function forAllAsync(
+  name: string,
+  property: (rng: Rng, index: number) => Promise<void>,
+  runs?: number,
+): Promise<void> {
+  const { seed, runs: padrao } = config();
+  const total = runs ?? padrao;
+  const base = (seed ^ hash(name)) >>> 0;
+  for (let i = 0; i < total; i++) {
+    const rng = new Rng((base + Math.imul(i, 0x9e3779b1)) >>> 0);
+    try {
+      await property(rng, i);
+    } catch (erro) {
+      const motivo = erro instanceof Error ? erro.message : String(erro);
+      throw new Error(
+        `Propriedade "${name}" falhou no caso ${String(i)} (PROP_SEED=${String(seed)}): ${motivo}`,
+        {
+          cause: erro,
+        },
+      );
+    }
+  }
+}
