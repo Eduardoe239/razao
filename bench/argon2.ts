@@ -11,8 +11,9 @@ interface Config {
 
 const CONFIGS: Config[] = [
   { nome: 'Aprovado (64 MiB, 3 iterações)', memoriaKiB: 65536, iteracoes: 3 },
-  { nome: 'Alternativa (46 MiB, 1 iteração)', memoriaKiB: 47104, iteracoes: 1 },
-  { nome: 'Mínimo OWASP (19 MiB, 2 iterações)', memoriaKiB: 19456, iteracoes: 2 },
+  { nome: 'Proposta (64 MiB, 1 iteração)', memoriaKiB: 65536, iteracoes: 1 },
+  { nome: 'Intermediária (64 MiB, 2 iterações)', memoriaKiB: 65536, iteracoes: 2 },
+  { nome: 'Mínimo OWASP (46 MiB, 1 iteração)', memoriaKiB: 47104, iteracoes: 1 },
 ];
 const RODADAS = 5;
 

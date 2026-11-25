@@ -7,7 +7,7 @@ const texto = readFileSync(new URL('../public/_headers', import.meta.url), 'utf8
 const cabecalhos = Object.fromEntries(
   texto
     .split('\n')
-    .filter((l) => /^\s+\S/.test(l))
+    .filter((l) => /^\s+[^\s!]/.test(l))
     .map((l) => {
       const i = l.indexOf(':');
       return [l.slice(0, i).trim().toLowerCase(), l.slice(i + 1).trim()];
@@ -55,6 +55,12 @@ describe('[SEC-01] política de segurança de conteúdo', () => {
 });
 
 describe('[SEC-02] cabeçalhos de transporte e permissões', () => {
+  it('remove os cabeçalhos padrão que não servem ao app: CORS aberto e relatório de erros de rede', () => {
+    for (const h of ['Access-Control-Allow-Origin', 'Report-To', 'NEL']) {
+      expect(texto).toContain(`  ! ${h}`);
+    }
+  });
+
   it('força HTTPS por um ano', () => {
     expect(cabecalhos['strict-transport-security']).toMatch(/max-age=31536000/);
   });
