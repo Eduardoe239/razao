@@ -177,13 +177,43 @@ describe('cofre e espaços pela aplicação', () => {
     expect(outra.app.waitSeconds()).toBeGreaterThan(0);
   });
 
+  it('[PERS-01] o pedido de armazenamento persistente não trava a criação nem o desbloqueio', async () => {
+    let pedidos = 0;
+    // Como no Firefox: o navegador pergunta ao usuário e a resposta nunca chega durante o teste.
+    const storage = {
+      persisted: () => Promise.resolve(false),
+      persist: () => {
+        pedidos++;
+        return new Promise<boolean>(() => undefined);
+      },
+    } as unknown as StorageManager;
+    const local = new Map<string, string>();
+    const kv = {
+      getItem: (k: string) => local.get(k) ?? null,
+      setItem: (k: string, v: string) => local.set(k, v),
+    };
+    const vault = createVaultPort({
+      dbName: `razao-persist-${String(++n)}`,
+      local: kv,
+      storage,
+      nowIso: () => '2027-03-10T12:00:00.000Z',
+      nowMs: () => Date.UTC(2027, 2, 10, 12),
+      kdf: { kdf: () => newArgon2Params({ memoryKiB: 256 }) },
+    });
+    const sessao = await (await vault.prepare('uma frase bem longa')).save();
+    sessao.close();
+    (await vault.unlock({ password: 'uma frase bem longa' })).close();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(pedidos).toBe(2);
+  });
+
   it('[PERS-06] marca de cofre sem banco abre como "sumiu", nunca como cofre novo', async () => {
     const local = new Map([[VAULT_MARKER_KEY, '1']]);
     const m = montar(local);
     expect(await m.app.presence()).toBe('sumiu');
   });
 
-  it('[INV-06] a mesma operação de conta gravada duas vezes não duplica', async () => {
+  it('[CON-001] a mesma operação de conta gravada duas vezes não duplica (INV-06)', async () => {
     const { s, pj, vault } = await cofreComContas();
     const op = s.newOperationId();
     await s.createAccount(pj.id, { name: 'Caixa', kind: 'dinheiro', openingCents: 5000, operationId: op });

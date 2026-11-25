@@ -32,6 +32,14 @@ import {
   vaultPresence,
 } from './storage/vault-store';
 
+/**
+ * PERS-01 sem travar a tela: no Firefox o pedido abre uma pergunta ao usuário e a promessa só
+ * termina quando ele responde. O cofre abre na hora; o resultado aparece no indicador (PERS-02).
+ */
+function pedirPersistencia(storage: StorageManager | undefined): void {
+  void requestPersistence(storage).catch(() => undefined);
+}
+
 /** Versão do formato dos dados gravada no cofre. Sobe junto com cada migração nova. */
 export const SCHEMA_VERSION = 1;
 const ATTEMPTS_KEY = 'razao:tentativas';
@@ -127,7 +135,7 @@ export function createVaultPort(o: AdapterOptions): VaultPort & { close(): Promi
               const db = await abrir();
               await initVault(db, { keys: header, schemaVersion: SCHEMA_VERSION, createdAt: o.nowIso() });
               o.local.setItem(VAULT_MARKER_KEY, '1');
-              await requestPersistence(o.storage).catch(() => undefined);
+              pedirPersistencia(o.storage);
               return sessao(db, dek);
             }),
         };
@@ -148,7 +156,7 @@ export function createVaultPort(o: AdapterOptions): VaultPort & { close(): Promi
           snapshotId: uuidv7(o.nowMs()),
         });
         // PERS-01: a cada abertura o app pede de novo o armazenamento persistente.
-        await requestPersistence(o.storage).catch(() => undefined);
+        pedirPersistencia(o.storage);
         return sessao(db, dek);
       }),
 
