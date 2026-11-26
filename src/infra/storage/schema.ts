@@ -22,6 +22,18 @@ export const entryLineSchema = z.object({
   amount: z.number().int().positive().max(MAX_AMOUNT),
 });
 
+function semVazios(links: {
+  reverses?: string | undefined;
+  replaces?: string | undefined;
+  deletes?: string | undefined;
+}): JournalEntry['links'] {
+  return {
+    ...(links.reverses === undefined ? {} : { reverses: links.reverses }),
+    ...(links.replaces === undefined ? {} : { replaces: links.replaces }),
+    ...(links.deletes === undefined ? {} : { deletes: links.deletes }),
+  };
+}
+
 export const journalEntrySchema = z
   .object({
     entryId: id,
@@ -45,14 +57,11 @@ export const journalEntrySchema = z
     ]),
     currency: z.literal('BRL'),
     lines: z.array(entryLineSchema).min(2).max(500),
-    links: z.object({ reverses: id.optional() }),
+    links: z.object({ reverses: id.optional(), replaces: id.optional(), deletes: id.optional() }),
     meta: z.record(z.string().max(100), z.string().max(2000)),
   })
   // Sem chave opcional vazia: o formato do domínio não aceita "reverses: undefined".
-  .transform((e): JournalEntry => ({
-    ...e,
-    links: e.links.reverses === undefined ? {} : { reverses: e.links.reverses },
-  }));
+  .transform((e): JournalEntry => ({ ...e, links: semVazios(e.links) }));
 
 /** Página mensal do diário: os lançamentos de um mês de um espaço. */
 export const journalPageSchema = z.object({

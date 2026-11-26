@@ -12,6 +12,8 @@ import { ENTITY, accountSchema, workspaceSchema } from './model';
 import { accountsOf, workspaceOf } from './session-read';
 import type { OpsContext, WorkspaceFootprint } from './account-ops';
 import * as ops from './account-ops';
+import type { EntryOps } from './session-entries';
+import { entryOps } from './session-entries';
 import type { BackupFile, BackupPreview } from './backup';
 import { createBackup, openBackup, restoreBackup } from './backup';
 import type {
@@ -320,6 +322,11 @@ export class VaultSession {
 
   private get ctx(): OpsContext {
     return { port: this.port, clock: this.clock };
+  }
+
+  /** Receitas, despesas e categorias do espaço (Alpha 2a). */
+  get entries(): EntryOps {
+    return entryOps(this.ctx, this.ids);
   }
 
   updateAccount(workspaceId: string, input: Parameters<typeof ops.updateAccount>[2]) {

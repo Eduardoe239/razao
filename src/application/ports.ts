@@ -33,6 +33,10 @@ export interface AuditNote {
 export interface WorkspaceCommit {
   readonly operationId: string;
   readonly entries: readonly JournalEntry[];
+  /** Pendentes trocados e, de realizado, só o `meta` (Volume 04, seção 7.4). */
+  readonly replace?: readonly JournalEntry[];
+  /** Pendentes removidos. */
+  readonly remove?: readonly string[];
   readonly items: readonly StoredItem[];
   readonly audit: AuditNote;
 }

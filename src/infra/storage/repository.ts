@@ -2,7 +2,7 @@
 // A cifra acontece antes da transação, porque o IndexedDB encerra a transação que espera outra coisa.
 // Dentro dela só há leituras de revisão e gravações; se algo mudou no meio, a gravação é recusada.
 import type { Journal } from '@/domain/journal';
-import { addLoadedEntries, appendOperation, emptyJournal } from '@/domain/journal';
+import { addLoadedEntries, appendOperation, applyUpdate, emptyJournal } from '@/domain/journal';
 import type { AccountLookup, JournalEntry, LedgerAccount } from '@/domain/ledger';
 import type { AuditInput } from './audit';
 import { chainEvent, verifyChain } from './audit';
@@ -31,6 +31,10 @@ export interface Problem {
 export interface CommitInput {
   readonly operationId: string;
   readonly entries: readonly JournalEntry[];
+  /** Pendentes trocados (mesmo entryId) e, de realizado, só o `meta` (Volume 04, seção 7.4). */
+  readonly replace?: readonly JournalEntry[];
+  /** Pendentes removidos do diário. */
+  readonly remove?: readonly string[];
   readonly entities?: readonly StoredEntity[];
   readonly audit: AuditInput;
 }
@@ -186,31 +190,68 @@ export class VaultRepository {
     if (jaExiste) return 'repetida';
 
     // 1. O domínio valida tudo antes de qualquer gravação.
-    const novoJournal = input.entries.length
-      ? appendOperation(state.journal, input.entries, accounts)
-      : state.journal;
+    const troca = input.replace ?? [];
+    const remove = input.remove ?? [];
+    const novoJournal =
+      troca.length || remove.length
+        ? applyUpdate(
+            state.journal,
+            { operationId: input.operationId, workspaceId: ws, add: input.entries, replace: troca, remove },
+            accounts,
+          )
+        : input.entries.length
+          ? appendOperation(state.journal, input.entries, accounts)
+          : state.journal;
 
     // 2. Monta e sela as páginas, entidades e o registro da operação, fora da transação.
+    const doMes = new Map<string, JournalEntry[]>();
+    const listaDoMes = (m: string): JournalEntry[] => {
+      let lista = doMes.get(m);
+      if (!lista) {
+        lista = [...(state.pages.get(m)?.page.entries ?? [])];
+        doMes.set(m, lista);
+      }
+      return lista;
+    };
+    const tirar = (id: string): void => {
+      const antes = state.journal.get(id);
+      if (!antes) return;
+      const lista = listaDoMes(monthOf(antes.date));
+      const i = lista.findIndex((e) => e.entryId === id);
+      if (i >= 0) lista.splice(i, 1);
+    };
+    for (const id of remove) tirar(id);
+    for (const e of troca) {
+      const antes = state.journal.get(e.entryId);
+      const lista = listaDoMes(monthOf(e.date));
+      const i =
+        antes && monthOf(antes.date) === monthOf(e.date)
+          ? lista.findIndex((x) => x.entryId === e.entryId)
+          : -1;
+      if (i >= 0) lista[i] = e;
+      else {
+        tirar(e.entryId);
+        lista.push(e);
+      }
+    }
+    for (const e of input.entries) listaDoMes(monthOf(e.date)).push(e);
     const paginas = new Map<
       string,
       { page: JournalPage; rev: number; sealed: SealedValue; digest: string }
     >();
-    for (const e of input.entries) {
-      const mes = monthOf(e.date);
-      const atual = paginas.get(mes)?.page ??
-        state.pages.get(mes)?.page ?? { workspaceId: ws, month: mes, entries: [] };
-      paginas.set(mes, {
-        page: { ...atual, entries: [...atual.entries, e] },
-        rev: state.pages.get(mes)?.rev ?? 0,
+    for (const [m, entries] of doMes) {
+      paginas.set(m, {
+        page: { workspaceId: ws, month: m, entries },
+        rev: state.pages.get(m)?.rev ?? 0,
         sealed: { iv: '', ct: '' },
         digest: '',
       });
     }
     const digests: Record<string, string> = {};
-    for (const [mes, p] of paginas) {
-      p.sealed = await seal(this.dek, this.ctx('journal', ws, mes), p.page);
+    for (const [m, p] of paginas) {
+      p.sealed = await seal(this.dek, this.ctx('journal', ws, m), p.page);
       p.digest = await digest(p.sealed);
-      digests[mes] = p.digest;
+      digests[m] = p.digest;
     }
     const entidades = await Promise.all(
       (input.entities ?? []).map(async (e) => ({
@@ -224,7 +265,7 @@ export class VaultRepository {
       operationId: input.operationId,
       workspaceId: ws,
       at: this.now(),
-      entryIds: input.entries.map((e) => e.entryId),
+      entryIds: [...input.entries, ...troca].map((e) => e.entryId),
     };
     const opSelada = await seal(this.dek, this.ctx('operations', ws, input.operationId), registro);
 

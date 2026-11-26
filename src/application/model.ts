@@ -58,8 +58,24 @@ export const ledgerAccountDataSchema = z.object({
   name: z.string().max(80),
 });
 
+/**
+ * CAT-001: categoria é uma conta interna do grupo Receitas ou Despesas (Volume 04, seção 3.1).
+ * Subcategoria aponta para a categoria pai, sempre do mesmo grupo e de um nível só.
+ */
+export const categorySchema = z.object({
+  id: z.string().min(1).max(200),
+  name: z.string().trim().min(1).max(60),
+  group: z.enum(['income', 'expense']),
+  parentId: z.string().min(1).max(200).nullable(),
+  ledgerAccountId: z.string().min(1).max(200),
+  archived: z.boolean(),
+  createdAt: z.string().max(40),
+});
+export type Category = z.infer<typeof categorySchema>;
+
 export const ENTITY = {
   workspace: 'workspace',
   account: 'account',
   ledgerAccount: 'ledger-account',
+  category: 'category',
 } as const;

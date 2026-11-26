@@ -20,7 +20,7 @@ export interface OpsContext {
 
 export const DELETE_WORD = 'EXCLUIR';
 
-function domainSafe<T>(fn: () => T): T {
+export function domainSafe<T>(fn: () => T): T {
   try {
     return fn();
   } catch (erro) {
@@ -29,7 +29,7 @@ function domainSafe<T>(fn: () => T): T {
   }
 }
 
-function writable(port: SessionPort): void {
+export function writable(port: SessionPort): void {
   if (port.safeMode) {
     throw new AppError(
       'SAFE_MODE',
@@ -40,7 +40,10 @@ function writable(port: SessionPort): void {
 
 const mesmoNome = (a: string, b: string) => a.toLocaleLowerCase('pt-BR') === b.toLocaleLowerCase('pt-BR');
 
-function contaDe(snap: WorkspaceSnapshot, accountId: string): { account: Account; ledger: LedgerAccount } {
+export function contaDe(
+  snap: WorkspaceSnapshot,
+  accountId: string,
+): { account: Account; ledger: LedgerAccount } {
   const account = accountsOf(snap).find((a) => a.id === accountId);
   const ledger = account ? snap.ledger.get(account.ledgerAccountId) : undefined;
   if (!account || !ledger)
@@ -122,7 +125,7 @@ export async function setAccountArchived(
 }
 
 /** Data digitada (aaaa-mm-dd) que não pode ser futura: o que ainda não aconteceu não é realizado. */
-function dataAte(texto: string, hoje: CivilDate): CivilDate {
+export function dataAte(texto: string, hoje: CivilDate): CivilDate {
   if (!isCivilDate(texto)) throw new AppError('INVALID', 'Escolha uma data válida.');
   if (compareDates(texto, hoje) > 0) throw new AppError('INVALID', 'A data não pode ser depois de hoje.');
   return texto;

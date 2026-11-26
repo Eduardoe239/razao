@@ -36,7 +36,12 @@ export interface EntryLine {
 }
 
 export interface EntryLinks {
+  /** Estorno: o lançamento que este anula (INV-11). */
   readonly reverses?: string;
+  /** Edição de realizado: o lançamento novo aponta para o que ele substitui (Volume 04, seção 7.4). */
+  readonly replaces?: string;
+  /** Exclusão: o estorno marcado como exclusão aponta para o lançamento excluído (LAN-006). */
+  readonly deletes?: string;
 }
 
 export interface JournalEntry {

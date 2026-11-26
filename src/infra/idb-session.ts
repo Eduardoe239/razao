@@ -148,6 +148,8 @@ export class IdbSession implements SessionPort {
         {
           operationId: op.operationId,
           entries: op.entries,
+          ...(op.replace ? { replace: op.replace } : {}),
+          ...(op.remove ? { remove: op.remove } : {}),
           entities: op.items.map((i) => ({ type: i.type, id: i.id, workspaceId, data: { ...i.data } })),
           audit: {
             at: this.nowIso(),

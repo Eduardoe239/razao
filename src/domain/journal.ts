@@ -76,3 +76,71 @@ export function appendOperation(
   for (const e of entries) novo.set(e.entryId, e);
   return novo;
 }
+
+export interface JournalUpdate {
+  readonly operationId: string;
+  readonly workspaceId: string;
+  readonly add: readonly JournalEntry[];
+  readonly replace: readonly JournalEntry[];
+  readonly remove: readonly string[];
+}
+
+const soMetaMudou = (a: JournalEntry, b: JournalEntry) => sameEntry({ ...a, meta: {} }, { ...b, meta: {} });
+
+/**
+ * Aplica uma operação que também troca ou remove lançamentos (Volume 04, seção 7.4).
+ * Só pendente é trocado ou removido de verdade (INV-02); de um realizado só o `meta` muda,
+ * e qualquer outra correção é estorno. A identidade do lançamento trocado (entryId, operação, espaço) não muda.
+ * Quem chama garante a idempotência pelo registro da operação, como no appendOperation.
+ */
+export function applyUpdate(journal: Journal, update: JournalUpdate, accounts: AccountLookup): Journal {
+  const { add, replace, remove } = update;
+  if (!add.length && !replace.length && !remove.length) {
+    throw new DomainError('OPERATION_INVALID', 'Operação sem lançamentos.');
+  }
+  const tocados = new Set<string>();
+  const unico = (id: string) => {
+    if (tocados.has(id)) throw new DomainError('OPERATION_INVALID', `O lançamento ${id} aparece duas vezes.`);
+    tocados.add(id);
+  };
+  const existente = (id: string): JournalEntry => {
+    const e = journal.get(id);
+    if (!e) throw new DomainError('OPERATION_INVALID', `O lançamento ${id} não existe.`);
+    if (e.workspaceId !== update.workspaceId) {
+      throw new DomainError('WORKSPACE_MISMATCH', 'Uma operação não grava em dois espaços (INV-09).');
+    }
+    return e;
+  };
+  for (const e of replace) {
+    unico(e.entryId);
+    const antes = existente(e.entryId);
+    if (e.operationId !== antes.operationId || e.workspaceId !== antes.workspaceId) {
+      throw new DomainError('OPERATION_INVALID', 'Trocar um lançamento não muda a identidade dele.');
+    }
+    if (antes.status !== 'pendente' && !soMetaMudou(antes, e)) {
+      throw new DomainError('OPERATION_INVALID', 'Lançamento realizado só é corrigido por estorno (INV-11).');
+    }
+    validateEntry(e, accounts);
+  }
+  for (const id of remove) {
+    unico(id);
+    if (existente(id).status !== 'pendente') {
+      throw new DomainError('OPERATION_INVALID', 'Lançamento realizado não é apagado; é estornado (INV-11).');
+    }
+  }
+  for (const e of add) {
+    unico(e.entryId);
+    if (e.workspaceId !== update.workspaceId) {
+      throw new DomainError('WORKSPACE_MISMATCH', 'Uma operação não grava em dois espaços (INV-09).');
+    }
+    if (journal.has(e.entryId)) {
+      throw new DomainError('OPERATION_CONFLICT', `O lançamento ${e.entryId} já existe.`);
+    }
+    validateEntry(e, accounts);
+  }
+  const novo = new Map(journal);
+  for (const id of remove) novo.delete(id);
+  for (const e of replace) novo.set(e.entryId, e);
+  for (const e of add) novo.set(e.entryId, e);
+  return novo;
+}

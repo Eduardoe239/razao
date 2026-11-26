@@ -1,7 +1,7 @@
 // Leitura das entidades de um espaço: tudo passa pelo esquema; registro fora do formato é erro, nunca some.
 import { AppError } from './errors';
-import type { Account, Workspace } from './model';
-import { ENTITY, accountSchema, workspaceSchema } from './model';
+import type { Account, Category, Workspace } from './model';
+import { ENTITY, accountSchema, categorySchema, workspaceSchema } from './model';
 import type { StoredItem, WorkspaceSnapshot } from './ports';
 
 function parseItem<T>(
@@ -26,4 +26,8 @@ export function workspaceOf(snap: WorkspaceSnapshot): Workspace {
 
 export function accountsOf(snap: WorkspaceSnapshot): Account[] {
   return snap.items.filter((i) => i.type === ENTITY.account).map((i) => parseItem(i, accountSchema));
+}
+
+export function categoriesOf(snap: WorkspaceSnapshot): Category[] {
+  return snap.items.filter((i) => i.type === ENTITY.category).map((i) => parseItem(i, categorySchema));
 }

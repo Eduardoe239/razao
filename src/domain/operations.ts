@@ -13,9 +13,9 @@ export interface OperationContext {
   readonly date: CivilDate;
 }
 
-const opposite = (s: Side): Side => (s === 'D' ? 'C' : 'D');
+export const opposite = (s: Side): Side => (s === 'D' ? 'C' : 'D');
 
-function sameWorkspace(ctx: OperationContext, ...accounts: LedgerAccount[]): void {
+export function sameWorkspace(ctx: OperationContext, ...accounts: LedgerAccount[]): void {
   for (const a of accounts) {
     if (a.workspaceId !== ctx.workspaceId) {
       throw new DomainError('WORKSPACE_MISMATCH', `Conta ${a.id} é de outro espaço.`);
@@ -23,11 +23,12 @@ function sameWorkspace(ctx: OperationContext, ...accounts: LedgerAccount[]): voi
   }
 }
 
-function group(account: LedgerAccount, allowed: LedgerAccount['group'][], what: string): void {
+export function group(account: LedgerAccount, allowed: LedgerAccount['group'][], what: string): void {
   ensure(allowed.includes(account.group), 'OPERATION_INVALID', `${what}: tipo de conta não permitido.`);
 }
 
-function entry(
+/** Monta um lançamento da operação na posição `index`. Os outros módulos do domínio usam este também. */
+export function entry(
   ctx: OperationContext,
   index: number,
   kind: JournalEntry['kind'],
