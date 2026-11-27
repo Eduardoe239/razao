@@ -1,6 +1,6 @@
 // Lançamentos: para onde foi o dinheiro? Mês, totais do filtro sempre visíveis, lista por dia e detalhe
 // (LAN-011, D-050). Excluir mostra "Desfazer" por 10 s (LAN-006). Busca, CSV e seleção em lote no I-05.
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { FlowFilter, FlowTab } from '@/application/entry-list';
 import {
   activeFilterCount,
@@ -10,49 +10,30 @@ import {
   groupByDay,
   monthLabel,
   monthOfDate,
-  shiftMonth,
 } from '@/application/entry-list';
 import type { FlowRow, UndoToken } from '@/application/entry-ops';
+import { createSuggester } from '@/application/ai';
+import { explainFlows } from '@/application/explain';
+import { ExplainSheet } from '../ai/ExplainSheet';
 import { messageFor } from '@/application/errors';
-import { formatBRL } from '@/application/format';
 import type { VaultSession, WorkspaceView } from '@/application/session';
 import { Alert, Button, EmptyState } from '../components/ds';
-import { Icon } from '../components/Icon';
 import { Sheet } from '../components/Sheet';
 import { EntryDetail } from './EntryDetail';
 import { EntryFilters } from './EntryFilters';
 import { EntryForm } from './EntryForm';
 import { DayGroups, flowTitle } from './EntryRows';
 import { ExportSheet, RecategorizeSheet } from './EntrySheets';
+import { PeriodCard, UndoToast } from './EntryPeriod';
 import { SearchSheet } from './SearchSheet';
 import { useEntries } from './useEntries';
 
 type Painel =
-  | { t: 'novo' | 'filtros' | 'buscar' | 'exportar' | 'recategorizar' }
+  | { t: 'novo' | 'filtros' | 'buscar' | 'exportar' | 'recategorizar' | 'explicar' }
   | { t: 'detalhe' | 'editar' | 'duplicar'; id: string }
   | null;
 
 const TABS: readonly FlowTab[] = ['todos', 'entradas', 'saidas', 'a-vencer'];
-
-function UndoToast(p: { texto: string; onUndo: () => void; onDone: () => void }) {
-  const { onDone } = p;
-  useEffect(() => {
-    const t = window.setTimeout(onDone, 10_000);
-    return () => {
-      window.clearTimeout(t);
-    };
-  }, [onDone]);
-  return (
-    <div className="rz-toast-area" role="status" aria-live="polite">
-      <div className="rz-toast rz-toast-undo">
-        <span>{p.texto}</span>
-        <button type="button" className="rz-toast-btn" onClick={p.onUndo}>
-          Desfazer
-        </button>
-      </div>
-    </div>
-  );
-}
 
 export function EntriesPage(p: {
   session: VaultSession;
@@ -73,6 +54,14 @@ export function EntriesPage(p: {
   const [erro, setErro] = useState<string | undefined>();
   const [marcados, setMarcados] = useState<ReadonlySet<string> | null>(null);
   const contas = useMemo(() => new Map(view.accounts.map((a) => [a.account.id, a.account.name])), [view]);
+  const iaLigada = session.entries.aiEnabled();
+  const sugerir = useMemo(
+    () =>
+      estado.t === 'ok'
+        ? createSuggester(estado.rows, estado.categories, estado.rules, iaLigada)
+        : () => undefined,
+    [estado, iaLigada],
+  );
   const fechar = () => {
     setPainel(null);
     setErro(undefined);
@@ -156,13 +145,9 @@ export function EntriesPage(p: {
       },
     );
   };
-  const abrir = (t: 'novo' | 'filtros' | 'buscar' | 'exportar' | 'recategorizar') => () => {
+  const abrir = (t: 'novo' | 'filtros' | 'buscar' | 'exportar' | 'recategorizar' | 'explicar') => () => {
     setPainel({ t });
   };
-  const terceiro =
-    tab === 'a-vencer'
-      ? { rotulo: 'A vencer', valor: totais.pending }
-      : { rotulo: 'Resultado', valor: totais.result };
 
   return (
     <div className="rz-blocks rz-enter">
@@ -190,49 +175,14 @@ export function EntriesPage(p: {
         </Button>
       </div>
 
-      <section className="rz-card rz-period" aria-label="Período e totais">
-        {tab !== 'a-vencer' ? (
-          <div className="rz-period-nav">
-            <button
-              type="button"
-              className="rz-period-btn"
-              aria-label="Mês anterior"
-              onClick={() => {
-                setFiltro({ ...filtro, month: shiftMonth(filtro.month, -1) });
-              }}
-            >
-              <Icon name="back" size={18} />
-            </button>
-            <span className="rz-period-label">{monthLabel(filtro.month)}</span>
-            <button
-              type="button"
-              className="rz-period-btn"
-              aria-label="Próximo mês"
-              onClick={() => {
-                setFiltro({ ...filtro, month: shiftMonth(filtro.month, 1) });
-              }}
-            >
-              <Icon name="forward" size={18} />
-            </button>
-          </div>
-        ) : (
-          <span className="rz-period-label">Tudo o que ainda vai entrar ou sair</span>
-        )}
-        <dl className="rz-totals">
-          <div>
-            <dt>Entradas</dt>
-            <dd className="rz-num rz-totals-in">{formatBRL(totais.income, { signed: true })}</dd>
-          </div>
-          <div>
-            <dt>Saídas</dt>
-            <dd className="rz-num">{formatBRL(totais.expense)}</dd>
-          </div>
-          <div>
-            <dt>{terceiro.rotulo}</dt>
-            <dd className="rz-num">{formatBRL(terceiro.valor, { signed: true })}</dd>
-          </div>
-        </dl>
-      </section>
+      <PeriodCard
+        month={tab === 'a-vencer' ? null : filtro.month}
+        totals={totais}
+        onMonth={(m) => {
+          setFiltro({ ...filtro, month: m });
+        }}
+        onExplain={iaLigada && tab !== 'a-vencer' ? abrir('explicar') : undefined}
+      />
 
       {lista.length === 0 ? (
         <div className="rz-card">
@@ -288,7 +238,24 @@ export function EntriesPage(p: {
 
       {painel?.t === 'novo' ? (
         <Sheet title="Novo lançamento" onClose={fechar}>
-          <EntryForm session={session} view={view} categories={categories} rows={rows} onDone={gravou} />
+          <EntryForm
+            session={session}
+            view={view}
+            categories={categories}
+            rows={rows}
+            suggest={sugerir}
+            onDone={gravou}
+          />
+        </Sheet>
+      ) : null}
+      {painel?.t === 'explicar' ? (
+        <Sheet title="O que compõe estes totais" onClose={fechar}>
+          <ExplainSheet
+            explanation={explainFlows(lista, categories, monthLabel(filtro.month).toLocaleLowerCase('pt-BR'))}
+            onOpen={(id) => {
+              setPainel({ t: 'detalhe', id });
+            }}
+          />
         </Sheet>
       ) : null}
       {painel?.t === 'buscar' ? (
@@ -376,6 +343,7 @@ export function EntriesPage(p: {
             categories={categories}
             rows={rows}
             row={aberto}
+            suggest={sugerir}
             duplicate={painel.t === 'duplicar'}
             onDone={gravou}
           />

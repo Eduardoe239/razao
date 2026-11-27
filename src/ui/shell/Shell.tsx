@@ -17,6 +17,7 @@ import { BACKUP, CONFIG, CONFIG_SUBS, areaOf, parseRoute, routeHash } from './na
 import { PageBody } from './Pages';
 import { NewEntrySheet } from '../entries/NewEntrySheet';
 import { CategoriesPage } from '../categories/CategoriesPage';
+import { AiSettings } from '../ai/AiSettings';
 import { SideNav } from './SideNav';
 
 type Carga = { t: 'carregando' } | { t: 'ok'; view: WorkspaceView } | { t: 'erro'; msg: string };
@@ -184,7 +185,9 @@ export function Shell(p: {
               {config
                 ? rota.sub === 'categorias'
                   ? `Do espaço ${kind === 'PF' ? 'Pessoal' : 'Negócio'}`
-                  : 'Configurações deste aparelho'
+                  : rota.sub === 'ia'
+                    ? 'Neste aparelho, sem internet'
+                    : 'Configurações deste aparelho'
                 : area.question}
             </p>
           </div>
@@ -212,6 +215,7 @@ export function Shell(p: {
           {config && rota.sub === 'categorias' && ws ? (
             <CategoriesPage session={session} workspace={ws} onChanged={mudou} />
           ) : null}
+          {config && rota.sub === 'ia' ? <AiSettings session={session} onChanged={mudou} /> : null}
           {config && rota.sub === 'backup' ? (
             <BackupPage
               session={session}

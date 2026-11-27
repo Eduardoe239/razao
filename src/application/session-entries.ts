@@ -1,5 +1,14 @@
 // Receitas, despesas, categorias e regras, ligadas à sessão aberta. Fica fora do session.ts para ele não crescer.
+import type { CivilDate } from '@/domain/civil-date';
+import { balancesAt } from '@/domain/ledger';
 import type { OpsContext } from './account-ops';
+import type { AiAlert } from './ai';
+import { aiEnabled, computeAlerts, setAiEnabled } from './ai';
+import { dismissAlert, dismissedAlerts } from './ai-ops';
+import type { Explanation } from './explain';
+import { explainBalance } from './explain';
+import type { Prefs } from './reminder';
+import { accountsOf, workspaceOf } from './session-read';
 import { ensureDefaultCategories } from './category-defaults';
 import type { MovePreview, NewCategory } from './category-ops';
 import {
@@ -65,9 +74,20 @@ export interface EntryOps {
   ): Promise<{ result: Resultado; undo: UndoToken | null }>;
   undoRemove(workspaceId: string, input: { undo: UndoToken } & Op): Gravacao;
   confirm(workspaceId: string, input: { entryId: string; date: string } & Op): Gravacao;
+  /** IA-013: a Razão IA nível 1 está ligada neste aparelho? */
+  aiEnabled(): boolean;
+  setAiEnabled(on: boolean): void;
+  /** IA-004: por que o saldo de uma conta (ou o total do espaço) mudou entre duas datas. */
+  explainBalance(
+    workspaceId: string,
+    input: { accountId?: string; from: CivilDate; to: CivilDate },
+  ): Promise<Explanation>;
+  /** IA-006: até 3 alertas, sem os dispensados. Vazio com a IA desligada. */
+  alerts(workspaceId: string): Promise<AiAlert[]>;
+  dismissAlert(workspaceId: string, input: { alertId: string } & Op): Gravacao;
 }
 
-export function entryOps(c: OpsContext, ids: IdSource): EntryOps {
+export function entryOps(c: OpsContext, ids: IdSource, prefs: Prefs): EntryOps {
   return {
     categories: async (ws) => categoriesOf(await c.port.load(ws)),
     ensureDefaults: (ws) => ensureDefaultCategories(c, ids, ws),
@@ -97,5 +117,38 @@ export function entryOps(c: OpsContext, ids: IdSource): EntryOps {
     remove: (ws, input) => deleteEntry(c, ws, input),
     undoRemove: (ws, input) => undoDeleteEntry(c, ws, input),
     confirm: (ws, input) => confirmEntry(c, ws, input),
+    aiEnabled: () => aiEnabled(prefs),
+    setAiEnabled: (on) => {
+      setAiEnabled(prefs, on);
+    },
+    explainBalance: async (ws, input) => {
+      const snap = await c.port.load(ws);
+      return explainBalance({
+        workspace: workspaceOf(snap),
+        entries: snap.entries,
+        ledger: snap.ledger,
+        accounts: accountsOf(snap),
+        categories: categoriesOf(snap),
+        accountId: input.accountId,
+        from: input.from,
+        to: input.to,
+      });
+    },
+    alerts: async (ws) => {
+      if (!aiEnabled(prefs)) return [];
+      const snap = await c.port.load(ws);
+      const today = c.clock.today(workspaceOf(snap).timeZone);
+      const saldos = balancesAt(snap.entries, snap.ledger, ws, today);
+      const balances = accountsOf(snap)
+        .filter((a) => !a.archived)
+        .map((a) => ({ accountId: a.id, name: a.name, cents: saldos.get(a.ledgerAccountId) ?? 0 }));
+      return computeAlerts({
+        rows: await listFlows(c, ws),
+        balances,
+        today,
+        dismissed: dismissedAlerts(snap),
+      });
+    },
+    dismissAlert: (ws, input) => dismissAlert(c, ws, input),
   };
 }

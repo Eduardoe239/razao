@@ -1,9 +1,10 @@
 // Novo lançamento, edição e duplicar (LAN-001 a LAN-008, LAN-010; J-02). A categoria sugerida pela regra
 // já vem escolhida e sempre pode ser trocada (CAT-003). Clique duplo grava uma vez só (LAN-012).
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { categoryName, categoryOptions, lastCategory } from '@/application/entry-list';
 import type { FlowEntryInput, FlowRow } from '@/application/entry-ops';
 import { parseTags } from '@/application/entry-ops';
+import type { Suggester } from '@/application/ai';
 import { messageFor } from '@/application/errors';
 import { formatBRL, readMoney } from '@/application/format';
 import type { Category } from '@/application/model';
@@ -24,6 +25,8 @@ export interface EntryFormProps {
   readonly row?: FlowRow | undefined;
   readonly duplicate?: boolean;
   readonly onDone: (message: string) => void;
+  /** Sugestão de categoria (regras e Razão IA nível 1), montada uma vez por quem abre o formulário. */
+  readonly suggest: Suggester;
 }
 
 const centavos = (c: number) => formatBRL(c).replace(/^R\$\s/, '');
@@ -41,7 +44,6 @@ export function EntryForm(p: EntryFormProps) {
   const [descricao, setDescricao] = useState(row?.description ?? '');
   const [categoria, setCategoria] = useState(inicialCat || (lastCategory(p.rows, 'despesa') ?? ''));
   const [catTocada, setCatTocada] = useState(row !== undefined);
-  const [sugestao, setSugestao] = useState<{ desc: string; kind: string; categoryId: string } | null>(null);
   const [dividido, setDividido] = useState((row?.parts.length ?? 0) > 1);
   const [partes, setPartes] = useState<Parte[]>(
     row && row.parts.length > 1
@@ -63,30 +65,12 @@ export function EntryForm(p: EntryFormProps) {
   const op = useRef<string | null>(null);
   const select = useRef<HTMLDivElement>(null);
 
-  // CAT-003: sugestão pela regra, só enquanto a pessoa não escolheu a categoria por conta própria.
-  // A resposta vale para a descrição e o tipo em que foi pedida; se a pessoa já digitou outra coisa, é ignorada.
-  useEffect(() => {
-    if (catTocada || dividido || tipo === 'transferencia' || !descricao.trim()) return;
-    let vivo = true;
-    const t = window.setTimeout(() => {
-      session.entries.suggest(ws, { description: descricao, kind }).then(
-        (s) => {
-          if (!vivo) return;
-          setSugestao(s ? { desc: descricao, kind, categoryId: s.categoryId } : null);
-          if (s) setCategoria(s.categoryId);
-        },
-        () => undefined,
-      );
-    }, 200);
-    return () => {
-      vivo = false;
-      window.clearTimeout(t);
-    };
-  }, [session, ws, descricao, kind, catTocada, dividido, tipo]);
+  // CAT-003 e IA-001: regra da pessoa, histórico ou palavras, só enquanto ela não escolheu a categoria sozinha.
   const sugerida =
-    sugestao && !catTocada && !dividido && sugestao.desc === descricao && sugestao.kind === kind
-      ? sugestao.categoryId
-      : null;
+    !catTocada && !dividido && tipo !== 'transferencia' && descricao.trim()
+      ? p.suggest(descricao, kind)
+      : undefined;
+  const categoriaFinal = sugerida?.categoryId ?? categoria;
 
   /** Ao trocar de tipo, a categoria volta para a última usada naquele tipo (receita só oferece receita). */
   const mudarTipo = (novo: Tipo) => {
@@ -110,7 +94,7 @@ export function EntryForm(p: EntryFormProps) {
     const e: Record<string, string> = {};
     if (!total.ok) e['valor'] = valor.trim() ? total.reason : 'Digite o valor.';
     if (!conta) e['conta'] = 'Escolha a conta.';
-    if (!dividido && !categoria) e['categoria'] = 'Escolha a categoria.';
+    if (!dividido && !categoriaFinal) e['categoria'] = 'Escolha a categoria.';
     if (dividido) {
       partes.forEach((x, i) => {
         const v = readMoney(x.valor);
@@ -134,7 +118,7 @@ export function EntryForm(p: EntryFormProps) {
             const v = readMoney(x.valor);
             return { categoryId: x.categoryId, amountCents: v.ok ? v.cents : 0 };
           })
-        : [{ categoryId: categoria, amountCents: total.cents }],
+        : [{ categoryId: categoriaFinal, amountCents: total.cents }],
       date: data,
       status,
       description: descricao,
@@ -211,12 +195,13 @@ export function EntryForm(p: EntryFormProps) {
       {sugerida ? (
         <div className="rz-suggestion" role="status">
           <span>
-            Categoria sugerida: <strong>{categoryName(categories, sugerida)}</strong>
-            <span className="rz-suggestion-why">pela sua regra automática</span>
+            Categoria sugerida: <strong>{categoryName(categories, sugerida.categoryId)}</strong>
+            <span className="rz-suggestion-why">{sugerida.why}</span>
           </span>
           <Button
             size="sm"
             onClick={() => {
+              setCategoria(sugerida.categoryId);
               setCatTocada(true);
               select.current?.querySelector('select')?.focus();
             }}
@@ -229,7 +214,7 @@ export function EntryForm(p: EntryFormProps) {
         <div ref={select}>
           <SelectField
             label="Categoria"
-            value={categoria}
+            value={categoriaFinal}
             onChange={(v) => {
               setCatTocada(true);
               setCategoria(v);

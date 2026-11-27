@@ -408,3 +408,123 @@
     margin-left: calc(-1 * var(--space-3));
   }
 }
+
+/* Razão IA nível 1: Explicar, alertas e configuração (I-06) */
+.rz-period-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.rz-explain-open {
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.rz-explain-open:hover {
+  text-decoration: underline;
+}
+.rz-home-explain {
+  align-self: flex-start;
+}
+.rz-explain {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.rz-explain-sentence {
+  margin: 0;
+  font-size: 17px;
+  line-height: 26px;
+}
+.rz-explain-table {
+  padding: var(--space-1) 0;
+}
+.rz-explain-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 52px;
+  padding: 0 var(--space-4);
+  font-size: 15px;
+}
+.rz-explain-edge {
+  color: var(--ink-muted);
+  font-size: 14px;
+}
+.rz-explain-total {
+  color: var(--ink);
+  font-weight: 600;
+}
+.rz-explain-group {
+  border-top: 1px solid var(--line);
+}
+.rz-explain-group:last-of-type {
+  border-bottom: 1px solid var(--line);
+}
+.rz-explain-btn {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.rz-explain-label {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.rz-explain-in {
+  color: var(--positive);
+}
+.rz-explain-items {
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-3) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--ink-muted);
+}
+.rz-explain-items li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.rz-explain-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.rz-alert-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.rz-ia-list {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: 14px;
+  line-height: 20px;
+}
+.rz-explain-link {
+  min-height: 24px;
+}

@@ -329,7 +329,7 @@ export class VaultSession {
 
   /** Receitas, despesas e categorias do espaço (Alpha 2a). */
   get entries(): EntryOps {
-    return entryOps(this.ctx, this.ids);
+    return entryOps(this.ctx, this.ids, this.extras.prefs);
   }
 
   updateAccount(workspaceId: string, input: Parameters<typeof ops.updateAccount>[2]) {

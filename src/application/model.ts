@@ -86,10 +86,17 @@ export const categoryRuleSchema = z.object({
 });
 export type CategoryRuleItem = z.infer<typeof categoryRuleSchema>;
 
+/** IA-006: alerta dispensado não volta. Só o id do alerta e quando foi dispensado, cifrados no cofre. */
+export const alertDismissalSchema = z.object({
+  id: z.string().min(1).max(4000),
+  at: z.string().max(40),
+});
+
 export const ENTITY = {
   workspace: 'workspace',
   account: 'account',
   ledgerAccount: 'ledger-account',
   category: 'category',
   categoryRule: 'category-rule',
+  alertDismissal: 'alert-dismissal',
 } as const;

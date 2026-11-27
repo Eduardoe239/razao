@@ -31,6 +31,7 @@ for (const tema of ['light', 'dark'] as const) {
       '#/config/backup',
       '#/config/espacos',
       '#/config/categorias',
+      '#/config/ia',
     ]) {
       await page.goto(`/${t}`);
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
@@ -62,6 +63,15 @@ for (const tema of ['light', 'dark'] as const) {
     await page.keyboard.press('Escape');
     await page.getByRole('button', { name: 'Selecionar' }).click();
     await semViolacoesGraves(page, 'seleção em lote');
+    await page.getByRole('button', { name: 'Explicar' }).click();
+    await expect(page.getByRole('dialog', { name: 'O que compõe estes totais' })).toBeVisible();
+    await semViolacoesGraves(page, 'explicar os totais');
+    await page.keyboard.press('Escape');
+    await page.goto('/#/inicio/visao-geral');
+    await page.getByRole('button', { name: 'Por que o saldo mudou' }).click();
+    await expect(page.getByRole('dialog', { name: 'Por que o saldo mudou' })).toBeVisible();
+    await semViolacoesGraves(page, 'explicar o saldo');
+    await page.keyboard.press('Escape');
     await page.goto('/#/config/categorias');
     await page.getByRole('button', { name: /^Regras automáticas/ }).click();
     await expect(page.getByRole('dialog', { name: 'Regras automáticas' })).toBeVisible();

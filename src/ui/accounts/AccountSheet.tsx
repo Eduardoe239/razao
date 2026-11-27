@@ -6,14 +6,16 @@ import type { AccountView, VaultSession, WorkspaceView } from '@/application/ses
 import { Alert, Amount, Badge, Button } from '../components/ds';
 import { Sheet } from '../components/Sheet';
 import { AdjustForm, EditAccountForm, TransferForm } from './AccountForms';
+import { ExplainBalance } from '../ai/HomeInsights';
 
-type Modo = 'detalhe' | 'editar' | 'transferir' | 'ajustar';
+type Modo = 'detalhe' | 'editar' | 'transferir' | 'ajustar' | 'explicar';
 
 const TITULO: Record<Modo, string> = {
   detalhe: '',
   editar: 'Editar conta',
   transferir: 'Transferir',
   ajustar: 'Ajustar saldo',
+  explicar: 'Por que o saldo mudou',
 };
 
 export function AccountSheet(p: {
@@ -61,6 +63,17 @@ export function AccountSheet(p: {
               {ACCOUNT_KIND_LABELS[account.kind]} {account.archived ? <Badge>Arquivada</Badge> : null}
             </span>
             <Amount cents={balance} kind="balance" size="hero" />
+            {p.session.entries.aiEnabled() ? (
+              <button
+                type="button"
+                className="rz-explain-open"
+                onClick={() => {
+                  setModo('explicar');
+                }}
+              >
+                Por que o saldo mudou
+              </button>
+            ) : null}
           </div>
           {erro ? (
             <Alert tone="negative" title="Não deu certo">
@@ -110,6 +123,14 @@ export function AccountSheet(p: {
       ) : null}
       {modo === 'editar' ? <EditAccountForm {...comum} account={account} onCancel={voltar} /> : null}
       {modo === 'transferir' ? <TransferForm {...comum} fromId={account.id} onCancel={voltar} /> : null}
+      {modo === 'explicar' ? (
+        <>
+          <ExplainBalance session={p.session} view={p.view} accountId={account.id} />
+          <Button variant="ghost" block onClick={voltar}>
+            Voltar
+          </Button>
+        </>
+      ) : null}
       {modo === 'ajustar' ? (
         <AdjustForm {...comum} account={account} balance={balance} onCancel={voltar} />
       ) : null}

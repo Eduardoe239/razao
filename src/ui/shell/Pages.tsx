@@ -10,6 +10,7 @@ import type { BackupStatus } from '@/application/reminder';
 import { Alert, Amount, Badge, Button, EmptyState, StatCard } from '../components/ds';
 import { Sheet } from '../components/Sheet';
 import { EntriesPage } from '../entries/EntriesPage';
+import { AlertsBlock, ExplainBalanceSheet } from '../ai/HomeInsights';
 import type { Route } from './nav';
 import { BACKUP, areaOf } from './nav';
 
@@ -75,14 +76,18 @@ function contasTexto(n: number): string {
 type Lembrete = BackupStatus['reminder'];
 
 function Inicio({
+  session,
   view,
   navigate,
   reminder,
 }: {
+  session: VaultSession;
   view: WorkspaceView;
   navigate: (r: Route) => void;
   reminder: Lembrete;
 }) {
+  const [explicar, setExplicar] = useState(false);
+  const ia = session.entries.aiEnabled();
   const ativas = view.accounts.filter((a) => !a.account.archived);
   const verContas = () => {
     navigate({ area: 'contas', sub: 'contas' });
@@ -102,6 +107,13 @@ function Inicio({
           </Button>
         </Alert>
       ) : null}
+      <AlertsBlock
+        session={session}
+        view={view}
+        onSee={(a) => {
+          navigate({ area: 'lancamentos', sub: a.kind === 'duplicado' ? 'todos' : 'a-vencer' });
+        }}
+      />
       <div className="rz-blocks rz-home">
         <div className="rz-home-stat">
           <StatCard
@@ -110,6 +122,17 @@ function Inicio({
             hero
             foot={`${contasTexto(ativas.length)} · até hoje, ${formatDate(view.asOf)}`}
           />
+          {ia ? (
+            <button
+              type="button"
+              className="rz-explain-open rz-home-explain"
+              onClick={() => {
+                setExplicar(true);
+              }}
+            >
+              Por que o saldo mudou
+            </button>
+          ) : null}
         </div>
         <section className="rz-section rz-home-contas" aria-labelledby="suas-contas">
           <div className="rz-section-head">
@@ -145,6 +168,15 @@ function Inicio({
           </div>
         </section>
       </div>
+      {explicar ? (
+        <ExplainBalanceSheet
+          session={session}
+          view={view}
+          onClose={() => {
+            setExplicar(false);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -273,7 +305,7 @@ export function PageBody({
       />
     );
   if (route.area === 'inicio' && route.sub === 'visao-geral')
-    return <Inicio view={view} navigate={navigate} reminder={reminder} />;
+    return <Inicio session={session} view={view} navigate={navigate} reminder={reminder} />;
   if (route.area === 'contas' && route.sub === 'contas')
     return <Contas session={session} view={view} onChanged={onChanged} />;
   const area = areaOf(route.area);
