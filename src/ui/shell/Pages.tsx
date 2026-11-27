@@ -9,6 +9,7 @@ import { NewAccountForm, TransferForm } from '../accounts/AccountForms';
 import type { BackupStatus } from '@/application/reminder';
 import { Alert, Amount, Badge, Button, EmptyState, StatCard } from '../components/ds';
 import { Sheet } from '../components/Sheet';
+import { EntriesPage } from '../entries/EntriesPage';
 import type { Route } from './nav';
 import { BACKUP, areaOf } from './nav';
 
@@ -135,7 +136,7 @@ function Inicio({
             Próximos passos
           </h2>
           <div className="rz-list" style={{ border: 0 }}>
-            {['Importar um extrato', 'Cadastrar um cartão', 'Registrar o primeiro gasto'].map((s) => (
+            {['Importar um extrato', 'Cadastrar um cartão'].map((s) => (
               <div key={s} className="rz-suggest">
                 <span>{s}</span>
                 <Badge>Em breve</Badge>
@@ -250,6 +251,7 @@ export function PageBody({
   navigate,
   session,
   onChanged,
+  onRefresh,
   reminder,
 }: {
   route: Route;
@@ -257,8 +259,19 @@ export function PageBody({
   navigate: (r: Route) => void;
   session: VaultSession;
   onChanged: (m: string) => void;
+  onRefresh: () => void;
   reminder: Lembrete;
 }) {
+  if (route.area === 'lancamentos')
+    return (
+      <EntriesPage
+        session={session}
+        view={view}
+        tab={route.sub}
+        onChanged={onChanged}
+        onRefresh={onRefresh}
+      />
+    );
   if (route.area === 'inicio' && route.sub === 'visao-geral')
     return <Inicio view={view} navigate={navigate} reminder={reminder} />;
   if (route.area === 'contas' && route.sub === 'contas')

@@ -1,4 +1,4 @@
-// Acessibilidade das telas da Alpha 1 (Volume 09, portão comum): axe sem violações graves ou críticas,
+// Acessibilidade das telas da Alpha 1 e da Alpha 2a (Volume 09, portão comum): axe sem violações graves ou críticas,
 // nos temas claro e escuro, e operação por teclado nas telas novas. Dados sintéticos.
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
@@ -41,6 +41,20 @@ for (const tema of ['light', 'dark'] as const) {
     await semViolacoesGraves(page, 'painel de nova conta');
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog')).toHaveCount(0);
+    // Alpha 2a: novo lançamento, lista com um lançamento e o detalhe.
+    await page.goto('/#/lancamentos/todos');
+    await page.getByRole('button', { name: 'Novo lançamento' }).filter({ visible: true }).first().click();
+    const novo = page.getByRole('dialog', { name: 'Novo lançamento' });
+    await novo.getByLabel('Valor', { exact: true }).fill('25,00');
+    await novo.getByLabel('Categoria', { exact: true }).selectOption({ label: 'Lazer' });
+    await semViolacoesGraves(page, 'novo lançamento');
+    await novo.getByRole('button', { name: 'Salvar lançamento' }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await semViolacoesGraves(page, 'lista de lançamentos');
+    await page.getByRole('button', { name: /^Lazer / }).click();
+    await expect(page.getByRole('dialog', { name: 'Lazer' })).toBeVisible();
+    await semViolacoesGraves(page, 'detalhe do lançamento');
+    await page.keyboard.press('Escape');
     await page.getByRole('button', { name: 'Bloquear o cofre' }).filter({ visible: true }).click();
     await semViolacoesGraves(page, 'desbloqueio');
   });

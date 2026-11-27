@@ -15,6 +15,7 @@ import type { Route } from './nav';
 import type { StorageStatus } from '@/application/ports';
 import { BACKUP, CONFIG, CONFIG_SUBS, areaOf, parseRoute, routeHash } from './nav';
 import { PageBody } from './Pages';
+import { NewEntrySheet } from '../entries/NewEntrySheet';
 import { SideNav } from './SideNav';
 
 type Carga = { t: 'carregando' } | { t: 'ok'; view: WorkspaceView } | { t: 'erro'; msg: string };
@@ -98,6 +99,11 @@ export function Shell(p: {
   const semAviso = useCallback(() => {
     setAviso(null);
   }, []);
+  /** Relê o espaço sem aviso (a tela que gravou já mostrou o seu, como o "Desfazer"). */
+  const atualizar = useCallback(() => {
+    setVersao((v) => v + 1);
+  }, []);
+  const [novo, setNovo] = useState(false);
 
   const trocarEspaco = (id: string) => {
     const novo = ativos.find((w) => w.id === id);
@@ -229,6 +235,7 @@ export function Shell(p: {
               navigate={navegar}
               session={session}
               onChanged={mudou}
+              onRefresh={atualizar}
               reminder={session.backupStatus(armazenamento?.persisted ?? false).reminder}
             />
           ) : null}
@@ -241,8 +248,11 @@ export function Shell(p: {
                 key={id}
                 type="button"
                 className="rz-fab"
-                disabled
-                aria-label="Novo lançamento (ainda não disponível)"
+                disabled={!visivel || session.safeMode}
+                aria-label="Novo lançamento"
+                onClick={() => {
+                  setNovo(true);
+                }}
               >
                 <Icon name="plus" size={24} />
               </button>
@@ -263,6 +273,19 @@ export function Shell(p: {
           )}
         </nav>
       </div>
+      {novo && visivel ? (
+        <NewEntrySheet
+          session={session}
+          view={visivel}
+          onClose={() => {
+            setNovo(false);
+          }}
+          onDone={(m) => {
+            setNovo(false);
+            mudou(m);
+          }}
+        />
+      ) : null}
       <Toast message={aviso} onDone={semAviso} />
     </div>
   );

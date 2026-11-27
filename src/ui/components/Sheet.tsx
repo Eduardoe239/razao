@@ -8,10 +8,13 @@ export function Sheet({
   title,
   onClose,
   children,
+  bottom,
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  /** No celular sobe de baixo e ocupa só o que precisa (detalhe do lançamento, D-050). */
+  bottom?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const id = useId();
@@ -31,7 +34,7 @@ export function Sheet({
   return (
     <dialog
       ref={ref}
-      className="rz-sheet"
+      className={bottom ? 'rz-sheet rz-sheet-bottom' : 'rz-sheet'}
       aria-labelledby={id}
       onCancel={(e) => {
         e.preventDefault();

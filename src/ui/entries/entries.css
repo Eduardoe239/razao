@@ -1,0 +1,241 @@
+/* Lançamentos, novo lançamento e detalhe (telas aprovadas na D-050). */
+.rz-entries-actions {
+  justify-content: flex-end;
+}
+.rz-period {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+.rz-period-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.rz-period-btn {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.rz-period-btn:hover {
+  background: var(--surface-subtle);
+}
+.rz-period-label {
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 600;
+}
+.rz-totals {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+.rz-totals div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rz-totals div:last-child {
+  text-align: right;
+}
+.rz-totals dt {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--ink-subtle);
+}
+.rz-totals dd {
+  margin: 0;
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 600;
+}
+.rz-totals-in {
+  color: var(--positive);
+}
+.rz-day {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.rz-day-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0 var(--space-1);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 500;
+  color: var(--ink-subtle);
+}
+
+/* Novo lançamento */
+.rz-entry-type {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+}
+.rz-entry-type .rz-seg-btn {
+  justify-content: center;
+  height: 40px;
+}
+.rz-suggestion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: calc(-1 * var(--space-3));
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--primary-soft);
+  font-size: 13px;
+  line-height: 18px;
+}
+.rz-suggestion strong {
+  font-weight: 600;
+}
+.rz-suggestion-why {
+  display: block;
+  color: var(--ink-muted);
+}
+.rz-split {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+.rz-split-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 128px;
+  gap: var(--space-2);
+  align-items: start;
+}
+.rz-split-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 13px;
+}
+.rz-split-actions {
+  display: flex;
+  gap: var(--space-1);
+}
+.rz-split-ok {
+  color: var(--positive);
+  font-weight: 500;
+}
+.rz-split-left {
+  color: var(--warning);
+  font-weight: 500;
+}
+.rz-check-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 44px;
+  font-size: 15px;
+  cursor: pointer;
+}
+.rz-form-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+.rz-more summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--primary);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* Detalhe */
+.rz-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.rz-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.rz-detail-when,
+.rz-detail-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--ink-muted);
+}
+.rz-detail-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+.rz-detail-actions .rz-btn {
+  justify-content: center;
+}
+.rz-ledger {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: var(--space-2);
+  font-size: 13px;
+  line-height: 20px;
+}
+.rz-ledger-pair {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+/* Aviso com "Desfazer" */
+.rz-toast-undo {
+  /* A área do aviso deixa o clique passar; o "Desfazer" precisa receber. */
+  pointer-events: auto;
+  gap: var(--space-3);
+  padding-right: var(--space-2);
+}
+.rz-toast-btn {
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+@media (max-width: 599.98px) {
+  .rz-split-row {
+    grid-template-columns: minmax(0, 1fr) 112px;
+  }
+}
+
+/* Uma linha por informação: o texto longo termina em reticências em vez de quebrar a linha */
+.rz-day .rz-tx > div:nth-child(2) {
+  min-width: 0;
+}
+.rz-day .rz-tx-title,
+.rz-day .rz-tx-meta {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

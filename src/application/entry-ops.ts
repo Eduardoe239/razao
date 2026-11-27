@@ -23,6 +23,32 @@ import type { WorkspaceSnapshot } from './ports';
 import { accountsOf, categoriesOf, workspaceOf } from './session-read';
 
 export const MAX_DESCRIPTION = 200;
+export const MAX_NOTE = 500;
+export const MAX_TAGS = 10;
+const MAX_TAG = 30;
+
+/** Tags sem espaço sobrando, sem repetir (maiúsculas não contam) e sem vírgula, que separa umas das outras. */
+export function cleanTags(tags: readonly string[]): string[] {
+  const out: string[] = [];
+  for (const t of tags) {
+    const limpa = t.replace(/,/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!limpa) continue;
+    if (limpa.length > MAX_TAG)
+      throw new AppError('INVALID', `Cada tag pode ter até ${String(MAX_TAG)} caracteres.`);
+    if (!out.some((x) => x.toLocaleLowerCase('pt-BR') === limpa.toLocaleLowerCase('pt-BR'))) out.push(limpa);
+  }
+  if (out.length > MAX_TAGS)
+    throw new AppError('INVALID', `Use até ${String(MAX_TAGS)} tags por lançamento.`);
+  return out;
+}
+
+/** "viagem, trabalho" vira ["viagem", "trabalho"]. */
+export function parseTags(texto: string): string[] {
+  return texto
+    .split(',')
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
 
 export interface PartInput {
   readonly categoryId: string;
@@ -37,6 +63,9 @@ export interface FlowEntryInput {
   readonly date: string;
   readonly status: EntryStatus;
   readonly description: string;
+  /** LAN-008: tags livres e observação. */
+  readonly tags?: readonly string[];
+  readonly note?: string;
   readonly operationId: string;
 }
 
@@ -54,6 +83,8 @@ export interface FlowRow {
   readonly amountCents: number;
   readonly parts: readonly PartInput[];
   readonly description: string;
+  readonly tags: readonly string[];
+  readonly note: string;
   readonly edited: boolean;
 }
 
@@ -91,13 +122,16 @@ function montar(snap: WorkspaceSnapshot, input: FlowEntryInput, hoje: CivilDate)
   if (descricao.length > MAX_DESCRIPTION) {
     throw new AppError('INVALID', `A descrição pode ter até ${String(MAX_DESCRIPTION)} caracteres.`);
   }
-  const flow: FlowInput = {
-    kind: input.kind,
-    account: ledger,
-    parts,
-    status: input.status,
-    meta: descricao ? { description: descricao } : {},
-  };
+  const nota = (input.note ?? '').trim();
+  if (nota.length > MAX_NOTE) {
+    throw new AppError('INVALID', `A observação pode ter até ${String(MAX_NOTE)} caracteres.`);
+  }
+  const tags = cleanTags(input.tags ?? []);
+  const meta: Record<string, string> = {};
+  if (descricao) meta['description'] = descricao;
+  if (tags.length) meta['tags'] = tags.join(', ');
+  if (nota) meta['note'] = nota;
+  const flow: FlowInput = { kind: input.kind, account: ledger, parts, status: input.status, meta };
   return { flow, date: data(input.date, input.status, hoje) };
 }
 
@@ -288,6 +322,8 @@ export async function listFlows(c: OpsContext, workspaceId: string): Promise<Flo
       amountCents: total,
       parts,
       description: e.meta['description'] ?? '',
+      tags: parseTags(e.meta['tags'] ?? ''),
+      note: e.meta['note'] ?? '',
       edited: e.links.replaces !== undefined,
     });
   }

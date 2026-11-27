@@ -362,3 +362,25 @@
   box-shadow: var(--shadow-md);
   animation: rz-enter var(--dur-slow) var(--ease-out) both;
 }
+
+/* No celular, o detalhe sobe de baixo (D-050) */
+@keyframes rz-sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+@media (max-width: 599.98px) {
+  .rz-sheet.rz-sheet-bottom {
+    /* Diálogo modal tem top e bottom 0; sem soltar o topo, ele esticaria até o alto da tela. */
+    top: auto;
+    bottom: 0;
+    margin: 0;
+    height: auto;
+    max-height: 88vh;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    animation: rz-sheet-up var(--dur-slow) var(--ease-out) both;
+  }
+}

@@ -4,7 +4,7 @@ import type { BackupFilePort, Clock, UpdatePort, VaultPort } from './ports';
 import { WriteTracker } from './session';
 
 describe('atualização do app', () => {
-  it('[SEC-05] a versão nova espera a gravação em andamento terminar', async () => {
+  it('[NFR-011] a versão nova espera a gravação em andamento terminar e não interrompe a operação', async () => {
     const t = new WriteTracker();
     let terminar: () => void = () => undefined;
     const gravacao = t.track(new Promise<void>((r) => (terminar = r)));

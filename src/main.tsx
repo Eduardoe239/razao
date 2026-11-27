@@ -17,6 +17,7 @@ import './ui/components/components.css';
 import './ui/components/extra.css';
 import './ui/screens/screens.css';
 import './ui/shell/shell.css';
+import './ui/entries/entries.css';
 
 const raiz = document.getElementById('app');
 if (!raiz) throw new Error('Elemento #app não encontrado no index.html.');

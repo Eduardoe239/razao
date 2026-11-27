@@ -28,6 +28,8 @@ const PATHS = {
   edit: 'M4 20h4L19 9l-4-4L4 16zM13 7l4 4',
   archive: 'M3 4h18v4H3zM5 8v12h14V8M10 12h4',
   trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
+  forward: 'M9 6l6 6-6 6',
+  search: 'M11 4a7 7 0 1 0 0 14a7 7 0 0 0 0-14zM20 20l-3.5-3.5',
 } as const;
 
 export type IconName = keyof typeof PATHS;

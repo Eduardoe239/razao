@@ -29,6 +29,14 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* D-050: barras de rolagem escondidas; a rolagem continua por toque, roda do mouse e teclado. */
+* {
+  scrollbar-width: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
+
 :focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
