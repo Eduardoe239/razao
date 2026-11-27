@@ -40,7 +40,12 @@ export function activeFilterCount(f: FlowFilter): number {
 /** Receita soma, despesa subtrai. */
 export const signedCents = (r: FlowRow): number => (r.kind === 'receita' ? r.amountCents : -r.amountCents);
 
-const semAcento = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLocaleLowerCase('pt-BR').trim();
+const semAcento = (t: string) =>
+  t
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('pt-BR')
+    .trim();
 
 export function filterFlows(
   rows: readonly FlowRow[],

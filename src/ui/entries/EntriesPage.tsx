@@ -1,10 +1,9 @@
 // Lançamentos: para onde foi o dinheiro? Mês, totais do filtro sempre visíveis, lista por dia e detalhe
-// (LAN-011, D-050). Excluir mostra "Desfazer" por 10 s (LAN-006).
-import { useCallback, useEffect, useState } from 'react';
+// (LAN-011, D-050). Excluir mostra "Desfazer" por 10 s (LAN-006). Busca, CSV e seleção em lote no I-05.
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FlowFilter, FlowTab } from '@/application/entry-list';
 import {
   activeFilterCount,
-  categoryName,
   emptyFilter,
   filterFlows,
   flowTotals,
@@ -12,34 +11,28 @@ import {
   monthLabel,
   monthOfDate,
   shiftMonth,
-  signedCents,
 } from '@/application/entry-list';
 import type { FlowRow, UndoToken } from '@/application/entry-ops';
 import { messageFor } from '@/application/errors';
 import { formatBRL } from '@/application/format';
 import type { VaultSession, WorkspaceView } from '@/application/session';
-import { Alert, Amount, Button, EmptyState } from '../components/ds';
+import { Alert, Button, EmptyState } from '../components/ds';
 import { Icon } from '../components/Icon';
 import { Sheet } from '../components/Sheet';
 import { EntryDetail } from './EntryDetail';
 import { EntryFilters } from './EntryFilters';
 import { EntryForm } from './EntryForm';
+import { DayGroups, flowTitle } from './EntryRows';
+import { ExportSheet, RecategorizeSheet } from './EntrySheets';
+import { SearchSheet } from './SearchSheet';
 import { useEntries } from './useEntries';
 
 type Painel =
-  | { t: 'novo' }
-  | { t: 'detalhe'; id: string }
-  | { t: 'editar'; id: string }
-  | { t: 'duplicar'; id: string }
-  | { t: 'filtros' }
+  | { t: 'novo' | 'filtros' | 'buscar' | 'exportar' | 'recategorizar' }
+  | { t: 'detalhe' | 'editar' | 'duplicar'; id: string }
   | null;
 
 const TABS: readonly FlowTab[] = ['todos', 'entradas', 'saidas', 'a-vencer'];
-
-function iniciais(texto: string): string {
-  const p = texto.trim().split(/\s+/);
-  return ((p[0]?.[0] ?? '') + (p[1]?.[0] ?? p[0]?.[1] ?? '')).toUpperCase() || '·';
-}
 
 function UndoToast(p: { texto: string; onUndo: () => void; onDone: () => void }) {
   const { onDone } = p;
@@ -78,12 +71,15 @@ export function EntriesPage(p: {
   const [desfazer, setDesfazer] = useState<{ token: UndoToken; texto: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState<string | undefined>();
+  const [marcados, setMarcados] = useState<ReadonlySet<string> | null>(null);
+  const contas = useMemo(() => new Map(view.accounts.map((a) => [a.account.id, a.account.name])), [view]);
   const fechar = () => {
     setPainel(null);
     setErro(undefined);
   };
   const gravou = (m: string) => {
     setPainel(null);
+    setMarcados(null);
     setChave((c) => c + 1);
     p.onChanged(m);
   };
@@ -112,13 +108,10 @@ export function EntriesPage(p: {
   const f = { ...filtro, tab };
   const lista = filterFlows(rows, f, categories);
   const totais = flowTotals(lista);
-  const grupos = groupByDay(lista, view.asOf);
   const nFiltros = activeFilterCount(f);
-  const achar = (id: string) => rows.find((r) => r.entryId === id);
-  const aberto = painel && 'id' in painel ? achar(painel.id) : undefined;
-  const titulo = (r: FlowRow) =>
-    r.description ||
-    (r.parts.length > 1 ? 'Lançamento dividido' : categoryName(categories, r.parts[0]?.categoryId ?? ''));
+  const aberto = painel && 'id' in painel ? rows.find((r) => r.entryId === painel.id) : undefined;
+  const titulo = (r: FlowRow) => flowTitle(r, categories);
+  const selecionados = marcados ? lista.filter((r) => marcados.has(r.entryId)) : [];
 
   const agir = async (fn: (op: string) => Promise<unknown>, depois: () => void) => {
     if (busy) return;
@@ -163,7 +156,9 @@ export function EntriesPage(p: {
       },
     );
   };
-
+  const abrir = (t: 'novo' | 'filtros' | 'buscar' | 'exportar' | 'recategorizar') => () => {
+    setPainel({ t });
+  };
   const terceiro =
     tab === 'a-vencer'
       ? { rotulo: 'A vencer', valor: totais.pending }
@@ -172,23 +167,26 @@ export function EntriesPage(p: {
   return (
     <div className="rz-blocks rz-enter">
       <div className="rz-actions rz-entries-actions">
-        <Button
-          variant="primary"
-          icon="plus"
-          className="rz-only-desktop"
-          onClick={() => {
-            setPainel({ t: 'novo' });
-          }}
-        >
+        <Button variant="primary" icon="plus" className="rz-only-desktop" onClick={abrir('novo')}>
           Novo lançamento
         </Button>
+        <Button icon="search" onClick={abrir('buscar')}>
+          Buscar
+        </Button>
+        <Button icon="sliders" onClick={abrir('filtros')}>
+          {nFiltros ? `Filtros · ${String(nFiltros)}` : 'Filtros'}
+        </Button>
+        <Button icon="download" onClick={abrir('exportar')} aria-label="Exportar CSV">
+          <span className="rz-only-desktop">Exportar CSV</span>
+        </Button>
         <Button
-          icon="sliders"
+          icon="check"
+          aria-pressed={marcados !== null}
           onClick={() => {
-            setPainel({ t: 'filtros' });
+            setMarcados(marcados ? null : new Set());
           }}
         >
-          {nFiltros ? `Filtros · ${String(nFiltros)}` : 'Filtros'}
+          {marcados ? 'Cancelar seleção' : 'Selecionar'}
         </Button>
       </div>
 
@@ -236,7 +234,7 @@ export function EntriesPage(p: {
         </dl>
       </section>
 
-      {grupos.length === 0 ? (
+      {lista.length === 0 ? (
         <div className="rz-card">
           <EmptyState
             title={rows.length === 0 ? 'Nenhum lançamento ainda' : 'Nada neste filtro'}
@@ -248,56 +246,92 @@ export function EntriesPage(p: {
           />
         </div>
       ) : (
-        grupos.map((g) => (
-          <section key={g.date} className="rz-day" aria-label={g.label}>
-            <div className="rz-day-head">
-              <span>{g.label}</span>
-              <span className="rz-num">{formatBRL(g.totalCents, { signed: true })}</span>
-            </div>
-            <ul className="rz-list" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-              {g.rows.map((r) => {
-                const conta = view.accounts.find((a) => a.account.id === r.accountId)?.account.name ?? '';
-                const cat =
-                  r.parts.length > 1
-                    ? `${String(r.parts.length)} categorias`
-                    : categoryName(categories, r.parts[0]?.categoryId ?? '');
-                return (
-                  <li key={r.entryId}>
-                    <button
-                      type="button"
-                      className="rz-row-btn"
-                      onClick={() => {
-                        setErro(undefined);
-                        setPainel({ t: 'detalhe', id: r.entryId });
-                      }}
-                    >
-                      <div className={r.status === 'pendente' ? 'rz-tx rz-tx-pending' : 'rz-tx'}>
-                        <span className="rz-tx-icon" aria-hidden="true">
-                          {iniciais(titulo(r))}
-                        </span>
-                        <div>
-                          <div className="rz-tx-title">{titulo(r)}</div>
-                          <div className="rz-tx-meta">
-                            {conta} · {cat}
-                            {r.edited ? ' · editado' : ''}
-                          </div>
-                        </div>
-                        <div className="rz-tx-right">
-                          <Amount cents={signedCents(r)} />
-                        </div>
-                      </div>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        ))
+        <DayGroups
+          groups={groupByDay(lista, view.asOf)}
+          categories={categories}
+          accountNames={contas}
+          onOpen={(id) => {
+            setErro(undefined);
+            setPainel({ t: 'detalhe', id });
+          }}
+          selection={
+            marcados
+              ? {
+                  marked: marcados,
+                  toggle: (id) => {
+                    const n = new Set(marcados);
+                    if (n.has(id)) n.delete(id);
+                    else n.add(id);
+                    setMarcados(n);
+                  },
+                }
+              : undefined
+          }
+        />
       )}
+
+      {marcados ? (
+        <div className="rz-batch-bar" role="region" aria-label="Ações em lote">
+          <span>
+            {selecionados.length === 1 ? '1 selecionado' : `${String(selecionados.length)} selecionados`}
+          </span>
+          <Button
+            size="sm"
+            variant="primary"
+            disabled={!selecionados.length}
+            onClick={abrir('recategorizar')}
+          >
+            Recategorizar
+          </Button>
+        </div>
+      ) : null}
 
       {painel?.t === 'novo' ? (
         <Sheet title="Novo lançamento" onClose={fechar}>
           <EntryForm session={session} view={view} categories={categories} rows={rows} onDone={gravou} />
+        </Sheet>
+      ) : null}
+      {painel?.t === 'buscar' ? (
+        <Sheet title="Buscar" onClose={fechar}>
+          <SearchSheet
+            workspaceId={ws}
+            rows={rows}
+            categories={categories}
+            accountNames={contas}
+            onOpen={(id) => {
+              setPainel({ t: 'detalhe', id });
+            }}
+            onCategory={(id) => {
+              setFiltro({ ...filtro, categoryIds: [id] });
+              setPainel(null);
+            }}
+          />
+        </Sheet>
+      ) : null}
+      {painel?.t === 'exportar' ? (
+        <Sheet title="Exportar CSV" onClose={fechar} bottom>
+          <ExportSheet
+            workspace={view.workspace}
+            rows={lista}
+            categories={categories}
+            accountNames={contas}
+            period={tab === 'a-vencer' ? 'a-vencer' : filtro.month}
+            onDone={(m) => {
+              setPainel(null);
+              p.onChanged(m);
+            }}
+          />
+        </Sheet>
+      ) : null}
+      {painel?.t === 'recategorizar' ? (
+        <Sheet title="Recategorizar em lote" onClose={fechar} bottom>
+          <RecategorizeSheet
+            session={session}
+            workspaceId={ws}
+            rows={selecionados}
+            categories={categories}
+            onDone={gravou}
+          />
         </Sheet>
       ) : null}
       {painel?.t === 'filtros' ? (

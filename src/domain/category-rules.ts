@@ -14,7 +14,12 @@ export interface CategoryRule {
 
 /** Sem acento, minúsculas e espaços simples: "POSTO  Shéll" e "posto shell" são o mesmo texto. */
 export function normalizeText(texto: string): string {
-  return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLocaleLowerCase('pt-BR').replace(/\s+/g, ' ').trim();
+  return texto
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('pt-BR')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /**

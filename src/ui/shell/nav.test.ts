@@ -24,5 +24,7 @@ describe('navegação em 5 áreas', () => {
     expect(parseRoute('#/qualquer/coisa', 'PF')).toEqual(HOME);
     expect(parseRoute('', 'PF')).toEqual(HOME);
     expect(routeHash({ area: 'ia', sub: 'resumos' })).toBe('#/ia/resumos');
+    expect(parseRoute('#/config/categorias', 'PJ')).toEqual({ area: 'config', sub: 'categorias' });
+    expect(parseRoute('#/config/outra', 'PF')).toEqual({ area: 'config', sub: 'espacos' });
   });
 });

@@ -30,6 +30,7 @@ for (const tema of ['light', 'dark'] as const) {
       '#/lancamentos/todos',
       '#/config/backup',
       '#/config/espacos',
+      '#/config/categorias',
     ]) {
       await page.goto(`/${t}`);
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
@@ -54,6 +55,20 @@ for (const tema of ['light', 'dark'] as const) {
     await page.getByRole('button', { name: /^Lazer / }).click();
     await expect(page.getByRole('dialog', { name: 'Lazer' })).toBeVisible();
     await semViolacoesGraves(page, 'detalhe do lançamento');
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Buscar' }).click();
+    await page.getByRole('dialog', { name: 'Buscar' }).getByLabel('Buscar em todos os meses').fill('lazer');
+    await semViolacoesGraves(page, 'busca');
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Selecionar' }).click();
+    await semViolacoesGraves(page, 'seleção em lote');
+    await page.goto('/#/config/categorias');
+    await page.getByRole('button', { name: /^Regras automáticas/ }).click();
+    await expect(page.getByRole('dialog', { name: 'Regras automáticas' })).toBeVisible();
+    await semViolacoesGraves(page, 'regras automáticas');
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: /^Lazer/ }).click();
+    await semViolacoesGraves(page, 'ações da categoria');
     await page.keyboard.press('Escape');
     await page.getByRole('button', { name: 'Bloquear o cofre' }).filter({ visible: true }).click();
     await semViolacoesGraves(page, 'desbloqueio');

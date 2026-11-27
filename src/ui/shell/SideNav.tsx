@@ -4,7 +4,7 @@ import type { WorkspaceKind } from '@/application/model';
 import { Button } from '../components/ds';
 import { Icon } from '../components/Icon';
 import type { Route } from './nav';
-import { AREAS, BACKUP, CONFIG } from './nav';
+import { AREAS, BACKUP, CATEGORIAS, CONFIG } from './nav';
 
 export function SideNav(p: {
   kind: WorkspaceKind;
@@ -83,6 +83,17 @@ export function SideNav(p: {
           }}
         >
           Espaços
+        </Button>
+        <Button
+          variant="ghost"
+          icon="list"
+          block
+          aria-current={route.area === 'config' && route.sub === 'categorias' ? 'page' : undefined}
+          onClick={() => {
+            navigate(CATEGORIAS);
+          }}
+        >
+          Categorias e regras
         </Button>
         <Button variant="ghost" icon="lock" block onClick={p.onLock}>
           Bloquear o cofre

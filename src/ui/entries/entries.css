@@ -230,12 +230,181 @@
 }
 
 /* Uma linha por informação: o texto longo termina em reticências em vez de quebrar a linha */
-.rz-day .rz-tx > div:nth-child(2) {
+.rz-flow-rows .rz-tx > div:nth-child(2) {
   min-width: 0;
 }
-.rz-day .rz-tx-title,
-.rz-day .rz-tx-meta {
+.rz-flow-rows .rz-tx-title,
+.rz-flow-rows .rz-tx-meta {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Busca, exportação e seleção em lote (I-05) */
+.rz-flow-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.rz-row-check {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  padding-left: var(--space-2);
+  cursor: pointer;
+}
+.rz-row-check .rz-checkbox {
+  justify-self: center;
+}
+.rz-batch-bar {
+  position: sticky;
+  bottom: calc(88px + env(safe-area-inset-bottom));
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--surface-inverse);
+  color: var(--ink-inverse);
+  box-shadow: var(--shadow-md);
+  font-size: 14px;
+}
+@media (min-width: 900px) {
+  .rz-batch-bar {
+    bottom: var(--space-6);
+  }
+}
+.rz-search-summary {
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: 14px;
+  color: var(--ink-muted);
+}
+.rz-search-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.rz-search-hint {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.rz-sheet-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink-muted);
+}
+.rz-preview-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-subtle);
+  font-size: 15px;
+  line-height: 22px;
+}
+.rz-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Categorias e regras */
+.rz-rules-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.rz-rules-card,
+.rz-cat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 56px;
+  padding: var(--space-2) var(--space-4);
+  text-align: left;
+}
+.rz-cat-sub {
+  padding-left: var(--space-10);
+}
+.rz-cat-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.rz-cat-name {
+  font-size: 15px;
+  line-height: 22px;
+}
+.rz-cat-main {
+  font-weight: 500;
+}
+.rz-rules {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.rz-rule {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+}
+.rz-rule-pos {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-subtle);
+}
+.rz-rule-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 15px;
+  line-height: 22px;
+}
+.rz-rule-off {
+  color: var(--ink-muted);
+}
+.rz-rule-actions {
+  display: flex;
+  align-items: center;
+}
+.rz-rule-actions .rz-period-btn:first-child svg {
+  transform: rotate(180deg);
+}
+.rz-rule-toggle {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+}
+.rz-rule-new {
+  padding: var(--space-4);
+}
+.rz-period-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+@media (max-width: 599.98px) {
+  /* No celular, os botões da regra vão para a linha de baixo e o texto usa a largura toda. */
+  .rz-rule {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+  .rz-rule-actions {
+    grid-column: 2;
+    margin-left: calc(-1 * var(--space-3));
+  }
 }

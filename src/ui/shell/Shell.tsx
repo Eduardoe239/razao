@@ -16,6 +16,7 @@ import type { StorageStatus } from '@/application/ports';
 import { BACKUP, CONFIG, CONFIG_SUBS, areaOf, parseRoute, routeHash } from './nav';
 import { PageBody } from './Pages';
 import { NewEntrySheet } from '../entries/NewEntrySheet';
+import { CategoriesPage } from '../categories/CategoriesPage';
 import { SideNav } from './SideNav';
 
 type Carga = { t: 'carregando' } | { t: 'ok'; view: WorkspaceView } | { t: 'erro'; msg: string };
@@ -179,7 +180,13 @@ export function Shell(p: {
             <h1 ref={titulo} tabIndex={-1} className="rz-page-title">
               {config ? tituloConfig : area.label}
             </h1>
-            <p className="rz-page-q">{config ? 'Configurações deste aparelho' : area.question}</p>
+            <p className="rz-page-q">
+              {config
+                ? rota.sub === 'categorias'
+                  ? `Do espaço ${kind === 'PF' ? 'Pessoal' : 'Negócio'}`
+                  : 'Configurações deste aparelho'
+                : area.question}
+            </p>
           </div>
           {subs.length > 1 ? (
             <div className={config ? 'rz-config-tabs' : 'rz-mobile-tabs'}>
@@ -201,6 +208,9 @@ export function Shell(p: {
           ) : null}
           {config && rota.sub === 'espacos' ? (
             <Espacos session={session} workspaces={workspaces} onChanged={mudou} />
+          ) : null}
+          {config && rota.sub === 'categorias' && ws ? (
+            <CategoriesPage session={session} workspace={ws} onChanged={mudou} />
           ) : null}
           {config && rota.sub === 'backup' ? (
             <BackupPage

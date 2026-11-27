@@ -95,7 +95,12 @@ export const HOME: Route = { area: 'inicio', sub: 'visao-geral' };
 export const CONFIG: Route = { area: 'config', sub: 'espacos' };
 export const BACKUP: Route = { area: 'config', sub: 'backup' };
 /** Abas das configurações, no canto superior (Volume 02, seção 6). */
-export const CONFIG_SUBS: readonly TabItem[] = [t('backup', 'Backup e segurança'), t('espacos', 'Espaços')];
+export const CATEGORIAS: Route = { area: 'config', sub: 'categorias' };
+export const CONFIG_SUBS: readonly TabItem[] = [
+  t('backup', 'Backup e segurança'),
+  t('espacos', 'Espaços'),
+  t('categorias', 'Categorias e regras'),
+];
 
 export function areaOf(id: AreaId | ExtraId): Area {
   return AREAS.find((a) => a.id === id) ?? (AREAS[0] as Area);
@@ -104,7 +109,7 @@ export function areaOf(id: AreaId | ExtraId): Area {
 /** Lê "#/contas/contas". Rota desconhecida ou que não existe no tipo de espaço volta para o Início. */
 export function parseRoute(hash: string, kind: WorkspaceKind): Route {
   const [, area, sub] = hash.replace(/^#/, '').split('/');
-  if (area === 'config') return sub === 'backup' ? BACKUP : CONFIG;
+  if (area === 'config') return sub === 'backup' ? BACKUP : sub === 'categorias' ? CATEGORIAS : CONFIG;
   const a = AREAS.find((x) => x.id === area);
   if (!a) return HOME;
   const subs = a.subs(kind);
