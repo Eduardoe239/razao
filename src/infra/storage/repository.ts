@@ -8,6 +8,7 @@ import type { AuditInput } from './audit';
 import { chainEvent, verifyChain } from './audit';
 import type { Db, EntityKey, SealedValue, StoredRecord } from './db';
 import { StorageError, abortQuietly, fromDomException } from './errors';
+import { blobKey, sealBlob } from './blobs';
 import { quarantine } from './quarantine';
 import type { AuditEvent, AuditPage, JournalPage, OperationRecord, StoredEntity } from './schema';
 import { auditPageSchema, entitySchema, journalPageSchema, ledgerAccountSchema } from './schema';
@@ -36,6 +37,9 @@ export interface CommitInput {
   /** Pendentes removidos do diário. */
   readonly remove?: readonly string[];
   readonly entities?: readonly StoredEntity[];
+  /** LAN-009: arquivos de comprovante, gravados e apagados na mesma transação. */
+  readonly putBlobs?: readonly { readonly id: string; readonly bytes: Uint8Array }[];
+  readonly deleteBlobs?: readonly string[];
   readonly audit: AuditInput;
 }
 
@@ -266,6 +270,12 @@ export class VaultRepository {
         sealed: await seal(this.dek, this.ctx('entities', ws, entityKey(e)), e),
       })),
     );
+    const blobs = await Promise.all(
+      (input.putBlobs ?? []).map(async (b) => ({
+        key: blobKey(ws, b.id),
+        sealed: await sealBlob(this.dek, this.schemaVersion, ws, b.id, b.bytes),
+      })),
+    );
     const registro: OperationRecord = {
       operationId: input.operationId,
       workspaceId: ws,
@@ -291,7 +301,10 @@ export class VaultRepository {
     // 4. Transação única, só com conferência de revisão e gravação.
     let aberta: { abort(): void } | undefined;
     try {
-      const tx = this.db.transaction(['entities', 'journal', 'operations', 'audit'], 'readwrite');
+      const tx = this.db.transaction(
+        ['entities', 'journal', 'operations', 'audit', 'attachments'],
+        'readwrite',
+      );
       aberta = tx;
       const fim = tx.done;
       // Evita aviso de promessa rejeitada quando a própria função aborta a transação.
@@ -319,6 +332,8 @@ export class VaultRepository {
       }
       conferir(await tx.objectStore('audit').get([ws, mesAudit]), audAtual?.rev ?? 0);
       await tx.objectStore('audit').put({ sealed: audSelada, rev: (audAtual?.rev ?? 0) + 1 }, [ws, mesAudit]);
+      for (const b of blobs) await tx.objectStore('attachments').put({ sealed: b.sealed, rev: 1 }, b.key);
+      for (const id of input.deleteBlobs ?? []) await tx.objectStore('attachments').delete(blobKey(ws, id));
       await tx.objectStore('operations').put({ sealed: opSelada, rev: 1 }, [ws, input.operationId]);
       await fim;
     } catch (erro) {

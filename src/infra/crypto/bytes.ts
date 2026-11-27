@@ -9,9 +9,11 @@ export function fromUtf8(bytes: Uint8Array): string {
 }
 
 export function toBase64(bytes: Uint8Array): string {
-  let s = '';
-  for (const b of bytes) s += String.fromCharCode(b);
-  return btoa(s);
+  // Em blocos, para um comprovante de 5 MB não virar 5 milhões de concatenações.
+  const partes: string[] = [];
+  for (let i = 0; i < bytes.length; i += 0x8000)
+    partes.push(String.fromCharCode(...bytes.subarray(i, i + 0x8000)));
+  return btoa(partes.join(''));
 }
 
 export function fromBase64(text: string): Uint8Array<ArrayBuffer> {

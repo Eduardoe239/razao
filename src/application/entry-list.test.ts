@@ -49,6 +49,7 @@ const row = (p: Partial<FlowRow> & Pick<FlowRow, 'entryId'>): FlowRow => ({
   tags: [],
   note: '',
   edited: false,
+  attachments: 0,
   ...p,
 });
 const rows = [

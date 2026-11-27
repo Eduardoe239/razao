@@ -19,6 +19,7 @@ import { messageFor } from '@/application/errors';
 import type { VaultSession, WorkspaceView } from '@/application/session';
 import { Alert, Button, EmptyState } from '../components/ds';
 import { Sheet } from '../components/Sheet';
+import { EntryAttachments } from './EntryAttachments';
 import { EntryDetail } from './EntryDetail';
 import { EntryFilters } from './EntryFilters';
 import { EntryForm } from './EntryForm';
@@ -332,6 +333,16 @@ export function EntriesPage(p: {
             }}
             onDelete={() => void excluir(aberto)}
             onConfirm={() => void confirmar(aberto)}
+            attachments={
+              <EntryAttachments
+                session={session}
+                workspaceId={ws}
+                entryId={aberto.entryId}
+                onChanged={() => {
+                  setChave((c) => c + 1);
+                }}
+              />
+            }
           />
         </Sheet>
       ) : null}

@@ -30,6 +30,10 @@ const PATHS = {
   trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
   forward: 'M9 6l6 6-6 6',
   search: 'M11 4a7 7 0 1 0 0 14a7 7 0 0 0 0-14zM20 20l-3.5-3.5',
+  clip: 'M21 11l-9 9a6 6 0 0 1-8.5-8.5l8.6-8.6A4 4 0 1 1 17.8 8.6l-8.6 8.6a2 2 0 0 1-2.8-2.8L14.5 6.3',
+  image:
+    'M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM4 16l5-5 4 4 2-2 5 5M15 9h.01',
+  file: 'M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5',
 } as const;
 
 export type IconName = keyof typeof PATHS;

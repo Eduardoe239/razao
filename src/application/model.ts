@@ -47,6 +47,8 @@ export const accountSchema = z.object({
   kind: z.enum(ACCOUNT_KINDS),
   ledgerAccountId: z.string().min(1).max(200),
   archived: z.boolean(),
+  /** CON-007: data civil em que a conta foi encerrada. Some quando ela é reativada. */
+  closedAt: z.string().max(10).optional(),
   createdAt: z.string().max(40),
 });
 export type Account = z.infer<typeof accountSchema>;
@@ -92,6 +94,27 @@ export const alertDismissalSchema = z.object({
   at: z.string().max(40),
 });
 
+/**
+ * LAN-009: dados de um comprovante. O arquivo, cifrado, fica no conjunto de anexos; aqui ficam o nome,
+ * o tipo, o tamanho e a impressão digital (SHA-256) que a verificação de integridade confere (BKP-007).
+ * `entryId` é o primeiro lançamento da corrente de edições, que não muda quando o lançamento é editado.
+ */
+export const attachmentSchema = z.object({
+  id: z.string().min(1).max(200),
+  entryId: z.string().min(1).max(200),
+  name: z.string().min(1).max(120),
+  mime: z.enum(['image/jpeg', 'image/png', 'image/webp', 'application/pdf']),
+  size: z
+    .number()
+    .int()
+    .positive()
+    .max(5 * 1024 * 1024),
+  sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  removed: z.boolean(),
+  createdAt: z.string().max(40),
+});
+export type AttachmentItem = z.infer<typeof attachmentSchema>;
+
 export const ENTITY = {
   workspace: 'workspace',
   account: 'account',
@@ -99,4 +122,5 @@ export const ENTITY = {
   category: 'category',
   categoryRule: 'category-rule',
   alertDismissal: 'alert-dismissal',
+  attachment: 'attachment',
 } as const;

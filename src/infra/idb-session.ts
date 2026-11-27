@@ -5,14 +5,17 @@ import type {
   BackupWorkspace,
   RestorePoint,
   SessionPort,
+  StorageCheck,
   StorageIssue,
   StoredItem,
+  WorkspaceStorageCheck,
   WorkspaceCommit,
   WorkspaceSnapshot,
 } from '@/application/ports';
 import type { LedgerAccount } from '@/domain/ledger';
 import { SCHEMA_VERSION, guarded } from './app-errors';
 import { exportWorkspace, importWorkspaces } from './storage/backup-io';
+import { eachBlob, readBlob, sha256Hex } from './storage/blobs';
 import type { Db } from './storage/db';
 import type { WorkspaceState } from './storage/repository';
 import { VaultRepository } from './storage/repository';
@@ -155,6 +158,8 @@ export class IdbSession implements SessionPort {
           entries: op.entries,
           ...(op.replace ? { replace: op.replace } : {}),
           ...(op.remove ? { remove: op.remove } : {}),
+          ...(op.putBlobs ? { putBlobs: op.putBlobs } : {}),
+          ...(op.deleteBlobs ? { deleteBlobs: op.deleteBlobs } : {}),
           entities: op.items.map((i) => ({ type: i.type, id: i.id, workspaceId, data: { ...i.data } })),
           audit: {
             at: this.nowIso(),
@@ -168,6 +173,42 @@ export class IdbSession implements SessionPort {
         },
         contas,
       );
+    });
+  }
+
+  async readBlob(workspaceId: string, id: string): Promise<Uint8Array> {
+    this.aberta();
+    try {
+      return await readBlob(this.db, this.dek, SCHEMA_VERSION, workspaceId, id);
+    } catch {
+      throw new AppError(
+        'STORAGE',
+        'O arquivo do comprovante não abriu: está faltando ou danificado. Rode a verificação de integridade.',
+      );
+    }
+  }
+
+  async verifyStorage(): Promise<StorageCheck> {
+    this.aberta();
+    return guarded(async () => {
+      // Repositório novo: nada do que está em memória entra na conta, tudo vem do disco de novo.
+      this.recomecar();
+      const out: WorkspaceStorageCheck[] = [];
+      for (const ws of await this.workspaceIds()) {
+        const antes = this.repo.issues.length;
+        const st = await this.state(ws);
+        const blobs: Record<string, string | null> = {};
+        for await (const b of eachBlob(this.db, this.dek, SCHEMA_VERSION, ws))
+          blobs[b.id] = b.bytes ? await sha256Hex(b.bytes) : null;
+        out.push({
+          workspaceId: ws,
+          problems: this.repo.issues.slice(antes),
+          auditEvents: [...st.auditPages.values()].reduce((n, p) => n + p.page.events.length, 0),
+          journalPages: st.pages.size,
+          blobs,
+        });
+      }
+      return { workspaces: out };
     });
   }
 

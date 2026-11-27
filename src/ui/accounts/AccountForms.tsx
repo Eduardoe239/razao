@@ -17,7 +17,7 @@ export interface FormProps {
 }
 
 /** Envio com estado de ocupado, erro visível e a mesma operação em todas as tentativas. */
-function useEnvio(session: VaultSession) {
+export function useEnvio(session: VaultSession) {
   const op = useRef<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState<string | undefined>();
@@ -37,7 +37,7 @@ function useEnvio(session: VaultSession) {
   return { busy, erro, run };
 }
 
-const parar = (fn: () => void) => (e: SyntheticEvent) => {
+export const parar = (fn: () => void) => (e: SyntheticEvent) => {
   e.preventDefault();
   fn();
 };
@@ -66,7 +66,7 @@ export function KindChips({ value, onChange }: { value: AccountKind; onChange: (
   );
 }
 
-function Rodape({
+export function Rodape({
   busy,
   label,
   erro,

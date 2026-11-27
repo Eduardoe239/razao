@@ -54,3 +54,70 @@ body {
 .rz-num {
   font-variant-numeric: tabular-nums;
 }
+
+/* Verificação de integridade (BKP-007) */
+.rz-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.rz-integrity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.rz-integrity-when {
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--ink-muted);
+}
+.rz-integrity-ws-title {
+  margin: 0 0 var(--space-2);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+.rz-integrity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.rz-integrity-item {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+.rz-integrity-mark {
+  display: inline-flex;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  background: var(--positive-soft);
+  color: var(--positive);
+}
+.rz-integrity-bad .rz-integrity-mark {
+  background: var(--negative-soft);
+  color: var(--negative);
+}
+.rz-integrity-label {
+  display: block;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+}
+.rz-integrity-detail {
+  display: block;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--ink-muted);
+}

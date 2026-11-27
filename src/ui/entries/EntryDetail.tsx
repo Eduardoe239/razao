@@ -3,6 +3,7 @@ import { categoryName } from '@/application/entry-list';
 import type { FlowRow } from '@/application/entry-ops';
 import { formatBRL, formatDate } from '@/application/format';
 import type { Category } from '@/application/model';
+import type { ReactNode } from 'react';
 import type { WorkspaceView } from '@/application/session';
 import { Alert, Amount, Badge, Button } from '../components/ds';
 
@@ -17,6 +18,8 @@ export function EntryDetail(p: {
   onDuplicate: () => void;
   onDelete: () => void;
   onConfirm: () => void;
+  /** LAN-009: o bloco de comprovantes, montado por quem tem a sessão. */
+  attachments?: ReactNode;
 }) {
   const { row, categories } = p;
   const conta = p.view.accounts.find((a) => a.account.id === row.accountId)?.account.name ?? 'Conta removida';
@@ -62,6 +65,7 @@ export function EntryDetail(p: {
           Editado. O histórico guarda a versão anterior, e o saldo foi recalculado.
         </p>
       ) : null}
+      {p.attachments}
       <details className="rz-more">
         <summary>Partidas contábeis</summary>
         <div className="rz-ledger">

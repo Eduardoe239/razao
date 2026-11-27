@@ -528,3 +528,87 @@
 .rz-explain-link {
   min-height: 24px;
 }
+
+/* Comprovantes (I-07) */
+.rz-tx-clip {
+  display: inline-flex;
+  vertical-align: -2px;
+  margin-left: 6px;
+  color: var(--ink-muted);
+}
+.rz-attach {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+.rz-attach-title {
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+.rz-attach-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.rz-attach-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 52px;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+.rz-attach-icon {
+  display: inline-flex;
+  color: var(--ink-muted);
+}
+.rz-attach-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+  line-height: 20px;
+}
+.rz-attach-name > span:first-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rz-attach-meta,
+.rz-attach-empty,
+.rz-attach-hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--ink-muted);
+}
+.rz-attach-actions {
+  display: flex;
+  gap: 2px;
+}
+.rz-attach-preview {
+  display: block;
+  width: 100%;
+  max-height: 60vh;
+  object-fit: contain;
+  margin-top: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--surface-subtle);
+}
+.rz-attach-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}

@@ -52,18 +52,22 @@ test.describe('contas e espaços', () => {
     await a.getByRole('button', { name: 'Ajustar saldo' }).click();
     await expect(lista.getByText(reais('9.200,00'))).toBeVisible();
 
-    // Conta com saldo não arquiva: primeiro o dinheiro sai dela.
+    // CON-007: conta com saldo só encerra com transferência final, na mesma operação.
     await page.getByRole('button', { name: /^Carteira / }).click();
-    await page.getByRole('dialog').getByRole('button', { name: 'Arquivar conta' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Encerrar conta' }).click();
+    const e = page.getByRole('dialog');
+    await expect(e.getByText(`A conta ainda tem ${reais('150,00')}`)).toBeVisible();
+    await expect(e.getByLabel('Transferir para')).toHaveValue(/.+/);
+    await e.getByRole('button', { name: 'Transferir e encerrar' }).click();
     await expect(
-      page.getByRole('dialog').getByText('Só dá para arquivar uma conta com saldo zero'),
+      page.getByRole('status').getByText(/foram para Banco Azul e a conta Carteira foi encerrada/),
     ).toBeVisible();
-    await page.getByRole('dialog').getByRole('button', { name: 'Fechar' }).click();
+    await expect(lista.getByText(reais('9.350,00'))).toBeVisible();
 
     // Tudo continua lá depois de bloquear e abrir de novo.
     await bloquearEAbrir(page);
     await irPara(page, 'Ver contas');
-    await expect(page.getByText(reais('9.350,00'))).toBeVisible();
+    await expect(page.getByText(reais('9.350,00')).first()).toBeVisible();
   });
 
   test('[COF-007] criar o Negócio depois, arquivar, reativar e excluir com a palavra digitada', async ({

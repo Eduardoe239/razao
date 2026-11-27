@@ -11,7 +11,9 @@ import type { WorkspaceState } from './repository';
 import type { AuditEvent } from './schema';
 import { operationRecordSchema } from './schema';
 import { digest, monthOf, openValid, seal } from './sealing';
+import { blobKey, blobRange, eachBlob, sealBlob } from './blobs';
 import { createSnapshot } from './snapshots';
+import { fromBase64Strict, toBase64 } from '../crypto/bytes';
 
 const ctx = (store: string, workspaceId: string, key: string, schemaVersion: number) => ({
   store,
@@ -44,6 +46,16 @@ export async function exportWorkspace(
     );
     operations.push({ operationId: op.operationId, at: op.at, entryIds: op.entryIds });
   }
+  // LAN-009: os comprovantes vão junto. Um que não abre deixaria o backup incompleto: nada é exportado.
+  const attachments: { id: string; data: string }[] = [];
+  for await (const b of eachBlob(db, dek, schemaVersion, ws)) {
+    if (!b.bytes)
+      throw new StorageError(
+        'NOT_FOUND',
+        'Um comprovante do cofre está danificado, e o backup ficaria incompleto. Nada foi exportado. Rode a verificação de integridade.',
+      );
+    attachments.push({ id: b.id, data: toBase64(b.bytes) });
+  }
   return {
     workspaceId: ws,
     entities: [...st.entities.values()].map(({ entity }) => ({
@@ -54,12 +66,13 @@ export async function exportWorkspace(
     journal: [...st.pages.values()].map(({ page }) => ({ month: page.month, entries: page.entries })),
     audit: [...st.auditPages.values()].map(({ page }) => ({ month: page.month, events: page.events })),
     operations,
+    ...(attachments.length ? { attachments } : {}),
   };
 }
 
 interface Gravacao {
-  readonly store: 'entities' | 'journal' | 'operations' | 'audit';
-  readonly key: EntityKey | WorkspaceMonthKey | [string, string];
+  readonly store: 'entities' | 'journal' | 'operations' | 'audit' | 'attachments';
+  readonly key: EntityKey | WorkspaceMonthKey | [string, string] | string;
   readonly sealed: SealedValue;
 }
 
@@ -86,6 +99,16 @@ async function selarEspaco(
       store: 'operations',
       key: [ws, o.operationId],
       sealed: await seal(dek, ctx('operations', ws, o.operationId, schemaVersion), { ...o, workspaceId: ws }),
+    });
+  }
+  for (const a of w.attachments ?? []) {
+    const bytes = fromBase64Strict(a.data);
+    if (!bytes)
+      throw new StorageError('NOT_FOUND', 'Um comprovante do backup está danificado. Nada foi restaurado.');
+    out.push({
+      store: 'attachments',
+      key: blobKey(ws, a.id),
+      sealed: await sealBlob(dek, schemaVersion, ws, a.id, bytes),
     });
   }
   const digests: Record<string, string> = {};
@@ -149,6 +172,7 @@ export async function importWorkspaces(
       for (const w of data) {
         const faixa = IDBKeyRange.bound([w.workspaceId], [w.workspaceId, []]);
         for (const s of stores) await tx.objectStore(s).delete(faixa);
+        await tx.objectStore('attachments').delete(blobRange(w.workspaceId));
       }
     }
     for (const g of gravacoes) {

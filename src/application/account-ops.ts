@@ -121,11 +121,104 @@ export async function setAccountArchived(
       );
     }
   }
+  // Reativar tira a data de encerramento (CON-007).
+  const semData: Account = { ...account };
+  delete semData.closedAt;
   return c.port.commit(workspaceId, {
     operationId: input.operationId,
     entries: [],
-    items: contaItens({ ...account, archived: input.archived }, ledger),
+    items: contaItens(
+      input.archived ? { ...account, archived: true } : { ...semData, archived: false },
+      ledger,
+    ),
     audit: { action: input.archived ? 'conta.arquivar' : 'conta.reativar', target: `account/${account.id}` },
+  });
+}
+
+export interface ClosePreview {
+  readonly balanceCents: number;
+  /** Lançamentos a vencer na conta: precisam ser confirmados ou excluídos antes. */
+  readonly pending: number;
+  /** Contas que podem receber (ou mandar) a transferência final. */
+  readonly targets: readonly { readonly id: string; readonly name: string }[];
+}
+
+/** CON-007: o que encerrar a conta pede, para a tela explicar antes do clique. */
+export async function previewClose(
+  c: OpsContext,
+  workspaceId: string,
+  accountId: string,
+): Promise<ClosePreview> {
+  const snap = await c.port.load(workspaceId);
+  const ws = workspaceOf(snap);
+  const { account, ledger } = contaDe(snap, accountId);
+  return {
+    balanceCents: saldoHoje(snap, ws, ledger.id, c.clock.today(ws.timeZone)),
+    pending: snap.entries.filter(
+      (e) => e.status === 'pendente' && e.lines.some((l) => l.accountId === ledger.id),
+    ).length,
+    targets: accountsOf(snap)
+      .filter((a) => a.id !== account.id && !a.archived)
+      .map((a) => ({ id: a.id, name: a.name })),
+  };
+}
+
+/**
+ * CON-007: encerrar só com saldo zero ou com transferência final. Com saldo, o dinheiro vai para outra conta
+ * (ou vem dela, se o saldo é negativo) e a conta é arquivada na mesma operação. O bloqueio sempre diz por quê.
+ */
+export async function closeAccount(
+  c: OpsContext,
+  workspaceId: string,
+  input: { accountId: string; toAccountId?: string; operationId: string },
+): Promise<'gravada' | 'repetida'> {
+  if (await alreadyDone(c, workspaceId, input.operationId)) return 'repetida';
+  writable(c.port);
+  const snap = await c.port.load(workspaceId);
+  const ws = workspaceOf(snap);
+  const { account, ledger } = contaDe(snap, input.accountId);
+  if (account.archived) throw new AppError('INVALID', 'Esta conta já está encerrada. Nada foi alterado.');
+  const prev = await previewClose(c, workspaceId, account.id);
+  if (prev.pending > 0) {
+    throw new AppError(
+      'INVALID',
+      `A conta tem ${prev.pending === 1 ? '1 lançamento a vencer' : `${String(prev.pending)} lançamentos a vencer`}. Confirme ou exclua antes de encerrar. Nada foi alterado.`,
+    );
+  }
+  const hoje = c.clock.today(ws.timeZone);
+  const saldo = prev.balanceCents;
+  let entries: ReturnType<typeof transfer> = [];
+  let destino: string | undefined;
+  if (saldo !== 0) {
+    if (!input.toAccountId) {
+      throw new AppError(
+        'INVALID',
+        'A conta ainda tem saldo. Escolha para qual conta o dinheiro vai antes de encerrar. Nada foi alterado.',
+      );
+    }
+    const outra = contaDe(snap, input.toAccountId);
+    if (outra.account.id === account.id || outra.account.archived) {
+      throw new AppError('INVALID', 'Escolha uma conta ativa e diferente desta. Nada foi alterado.');
+    }
+    destino = outra.account.id;
+    entries = domainSafe(() =>
+      transfer(
+        { operationId: input.operationId, workspaceId, date: hoje },
+        saldo > 0
+          ? { from: ledger, to: outra.ledger, amount: money(saldo) }
+          : { from: outra.ledger, to: ledger, amount: money(-saldo) },
+      ),
+    );
+  }
+  return c.port.commit(workspaceId, {
+    operationId: input.operationId,
+    entries,
+    items: contaItens({ ...account, archived: true, closedAt: hoje }, ledger),
+    audit: {
+      action: 'conta.encerrar',
+      target: `account/${account.id}`,
+      after: { balance: saldo, ...(destino ? { to: destino } : {}), date: hoje },
+    },
   });
 }
 

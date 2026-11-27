@@ -12,6 +12,7 @@ import { Alert, Badge, Button, TextField } from '../components/ds';
 import { SelectField, Sheet } from '../components/Sheet';
 import { useRazao } from '../context';
 import { CreateBackupSheet, RestoreBackupSheet, quando } from './BackupSheets';
+import { IntegrityCard } from './IntegrityCard';
 
 const mb = (bytes: number) =>
   `${(bytes / 1_048_576).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} MB`;
@@ -200,6 +201,8 @@ export function BackupPage(p: {
           }}
         />
       </section>
+
+      <IntegrityCard session={p.session} onChanged={p.onChanged} />
 
       {pontos.length ? (
         <section className="rz-card rz-section" aria-labelledby="pontos">

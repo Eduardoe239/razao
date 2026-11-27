@@ -6,9 +6,11 @@ import type { AccountView, VaultSession, WorkspaceView } from '@/application/ses
 import { Alert, Amount, Badge, Button } from '../components/ds';
 import { Sheet } from '../components/Sheet';
 import { AdjustForm, EditAccountForm, TransferForm } from './AccountForms';
+import { CloseAccountForm } from './CloseAccountForm';
+import { formatStoredDate } from '@/application/format';
 import { ExplainBalance } from '../ai/HomeInsights';
 
-type Modo = 'detalhe' | 'editar' | 'transferir' | 'ajustar' | 'explicar';
+type Modo = 'detalhe' | 'editar' | 'transferir' | 'ajustar' | 'explicar' | 'encerrar';
 
 const TITULO: Record<Modo, string> = {
   detalhe: '',
@@ -16,6 +18,7 @@ const TITULO: Record<Modo, string> = {
   transferir: 'Transferir',
   ajustar: 'Ajustar saldo',
   explicar: 'Por que o saldo mudou',
+  encerrar: 'Encerrar conta',
 };
 
 export function AccountSheet(p: {
@@ -34,20 +37,16 @@ export function AccountSheet(p: {
   };
   const comum = { session: p.session, view: p.view, onDone: p.onDone };
 
-  const arquivar = async () => {
+  const reativar = async () => {
     setBusy(true);
     setErro(undefined);
     try {
       await p.session.setAccountArchived(p.view.workspace.id, {
         accountId: account.id,
-        archived: !account.archived,
+        archived: false,
         operationId: p.session.newOperationId(),
       });
-      p.onDone(
-        account.archived
-          ? `Conta ${account.name} reativada.`
-          : `Conta ${account.name} arquivada. O histórico continua guardado.`,
-      );
+      p.onDone(`Conta ${account.name} reativada.`);
     } catch (e) {
       setErro(messageFor(e));
       setBusy(false);
@@ -60,7 +59,12 @@ export function AccountSheet(p: {
         <>
           <div className="rz-ob-intro">
             <span className="rz-stat-label">
-              {ACCOUNT_KIND_LABELS[account.kind]} {account.archived ? <Badge>Arquivada</Badge> : null}
+              {ACCOUNT_KIND_LABELS[account.kind]}{' '}
+              {account.archived ? (
+                <Badge>
+                  {account.closedAt ? `Encerrada em ${formatStoredDate(account.closedAt)}` : 'Arquivada'}
+                </Badge>
+              ) : null}
             </span>
             <Amount cents={balance} kind="balance" size="hero" />
             {p.session.entries.aiEnabled() ? (
@@ -115,9 +119,22 @@ export function AccountSheet(p: {
             >
               Editar nome e tipo
             </Button>
-            <Button variant="ghost" icon="archive" block busy={busy} onClick={() => void arquivar()}>
-              {account.archived ? 'Reativar conta' : 'Arquivar conta'}
-            </Button>
+            {account.archived ? (
+              <Button variant="ghost" icon="archive" block busy={busy} onClick={() => void reativar()}>
+                Reativar conta
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                icon="archive"
+                block
+                onClick={() => {
+                  setModo('encerrar');
+                }}
+              >
+                Encerrar conta
+              </Button>
+            )}
           </div>
         </>
       ) : null}
@@ -131,6 +148,7 @@ export function AccountSheet(p: {
           </Button>
         </>
       ) : null}
+      {modo === 'encerrar' ? <CloseAccountForm {...comum} account={account} onCancel={voltar} /> : null}
       {modo === 'ajustar' ? (
         <AdjustForm {...comum} account={account} balance={balance} onCancel={voltar} />
       ) : null}

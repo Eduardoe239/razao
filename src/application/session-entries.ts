@@ -3,6 +3,14 @@ import type { CivilDate } from '@/domain/civil-date';
 import { balancesAt } from '@/domain/ledger';
 import type { OpsContext } from './account-ops';
 import type { AiAlert } from './ai';
+import type { AttachmentInfo } from './attachment-ops';
+import {
+  addAttachment,
+  attachmentUsage,
+  listAttachments,
+  readAttachment,
+  removeAttachment,
+} from './attachment-ops';
 import { aiEnabled, computeAlerts, setAiEnabled } from './ai';
 import { dismissAlert, dismissedAlerts } from './ai-ops';
 import type { Explanation } from './explain';
@@ -85,6 +93,18 @@ export interface EntryOps {
   /** IA-006: até 3 alertas, sem os dispensados. Vazio com a IA desligada. */
   alerts(workspaceId: string): Promise<AiAlert[]>;
   dismissAlert(workspaceId: string, input: { alertId: string } & Op): Gravacao;
+  /** LAN-009: comprovantes do lançamento. */
+  attachments(workspaceId: string, entryId: string): Promise<AttachmentInfo[]>;
+  attach(
+    workspaceId: string,
+    input: { entryId: string; name: string; bytes: Uint8Array } & Op,
+  ): Promise<{ result: Resultado; attachmentId: string }>;
+  openAttachment(
+    workspaceId: string,
+    attachmentId: string,
+  ): Promise<{ info: AttachmentInfo; bytes: Uint8Array }>;
+  removeAttachment(workspaceId: string, input: { attachmentId: string } & Op): Gravacao;
+  attachmentUsage(workspaceId: string): Promise<{ count: number; bytes: number; warn: boolean }>;
 }
 
 export function entryOps(c: OpsContext, ids: IdSource, prefs: Prefs): EntryOps {
@@ -150,5 +170,13 @@ export function entryOps(c: OpsContext, ids: IdSource, prefs: Prefs): EntryOps {
       });
     },
     dismissAlert: (ws, input) => dismissAlert(c, ws, input),
+    attachments: (ws, entryId) => listAttachments(c, ws, entryId),
+    attach: async (ws, input) => {
+      const attachmentId = ids.newId();
+      return { result: await addAttachment(c, ws, { ...input, attachmentId }), attachmentId };
+    },
+    openAttachment: (ws, id) => readAttachment(c, ws, id),
+    removeAttachment: (ws, input) => removeAttachment(c, ws, input),
+    attachmentUsage: (ws) => attachmentUsage(c, ws),
   };
 }

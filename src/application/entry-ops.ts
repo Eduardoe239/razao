@@ -20,7 +20,8 @@ import { alreadyDone, contaDe, dataAte, domainSafe, writable } from './account-o
 import { AppError } from './errors';
 import type { Account, Category } from './model';
 import type { WorkspaceSnapshot } from './ports';
-import { accountsOf, categoriesOf, workspaceOf } from './session-read';
+import { attachmentCounts, rootFinder } from './attachment-ops';
+import { accountsOf, attachmentsOf, categoriesOf, workspaceOf } from './session-read';
 
 export const MAX_DESCRIPTION = 200;
 export const MAX_NOTE = 500;
@@ -86,6 +87,8 @@ export interface FlowRow {
   readonly tags: readonly string[];
   readonly note: string;
   readonly edited: boolean;
+  /** LAN-009: quantos comprovantes o lançamento tem. */
+  readonly attachments: number;
 }
 
 type Gravacao = Promise<'gravada' | 'repetida'>;
@@ -298,6 +301,8 @@ export async function listFlows(c: OpsContext, workspaceId: string): Promise<Flo
   const snap = await c.port.load(workspaceId);
   const contaPorLedger = new Map<string, Account>(accountsOf(snap).map((a) => [a.ledgerAccountId, a]));
   const catPorLedger = new Map<string, Category>(categoriesOf(snap).map((x) => [x.ledgerAccountId, x]));
+  const raiz = rootFinder(snap.entries);
+  const anexos = attachmentCounts(attachmentsOf(snap));
   const rows: FlowRow[] = [];
   for (const e of activeEntries(snap.entries)) {
     if (!isFlow(e)) continue;
@@ -325,6 +330,7 @@ export async function listFlows(c: OpsContext, workspaceId: string): Promise<Flo
       tags: parseTags(e.meta['tags'] ?? ''),
       note: e.meta['note'] ?? '',
       edited: e.links.replaces !== undefined,
+      attachments: anexos.get(raiz(e.entryId)) ?? 0,
     });
   }
   return rows.sort((a, b) => b.date.localeCompare(a.date) || b.entryId.localeCompare(a.entryId));

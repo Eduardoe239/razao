@@ -38,7 +38,26 @@ export interface WorkspaceCommit {
   /** Pendentes removidos. */
   readonly remove?: readonly string[];
   readonly items: readonly StoredItem[];
+  /** LAN-009: arquivos de comprovante gravados na mesma transação, cifrados pela infraestrutura. */
+  readonly putBlobs?: readonly { readonly id: string; readonly bytes: Uint8Array }[];
+  /** Arquivos de comprovante apagados na mesma transação. */
+  readonly deleteBlobs?: readonly string[];
   readonly audit: AuditNote;
+}
+
+/** BKP-007: o que a releitura do disco achou em um espaço. */
+export interface WorkspaceStorageCheck {
+  readonly workspaceId: string;
+  /** Problemas da releitura: registro que não abre, página diferente da auditoria, trilha quebrada. */
+  readonly problems: readonly StorageIssue[];
+  readonly auditEvents: number;
+  readonly journalPages: number;
+  /** SHA-256 de cada arquivo de comprovante decifrado; null quando o arquivo não abriu. */
+  readonly blobs: Readonly<Record<string, string | null>>;
+}
+
+export interface StorageCheck {
+  readonly workspaces: readonly WorkspaceStorageCheck[];
 }
 
 export interface StorageIssue {
@@ -67,6 +86,13 @@ export interface SessionPort {
    * a validação falharia (o lançamento editado não "existe mais") e o clique repetido viraria erro.
    */
   hasOperation(workspaceId: string, operationId: string): Promise<boolean>;
+  /** LAN-009: o arquivo do comprovante, decifrado. Lança AppError se não existir ou não abrir. */
+  readBlob(workspaceId: string, id: string): Promise<Uint8Array>;
+  /**
+   * BKP-007: esquece o que está em memória e relê tudo do disco, com todas as conferências da abertura,
+   * e decifra cada comprovante. Problema achado deixa o cofre em modo seguro; nada é corrigido.
+   */
+  verifyStorage(): Promise<StorageCheck>;
   /** COF-007: apaga tudo o que é do espaço, inclusive dos snapshots. Não tem volta. */
   deleteWorkspace(workspaceId: string): Promise<void>;
   /** BKP-001: tudo dos espaços pedidos, decifrado e validado, para ir ao arquivo de backup. */
@@ -104,6 +130,8 @@ export interface BackupWorkspace {
     readonly at: string;
     readonly entryIds: readonly string[];
   }[];
+  /** LAN-009: arquivos dos comprovantes, em base64. Backups anteriores ao I-07 não têm. */
+  readonly attachments?: readonly { readonly id: string; readonly data: string }[];
 }
 
 export interface AuditEventData {

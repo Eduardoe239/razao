@@ -6,6 +6,7 @@ import type { FlowRow } from '@/application/entry-ops';
 import { formatBRL, formatDate } from '@/application/format';
 import type { Category } from '@/application/model';
 import { Amount } from '../components/ds';
+import { Icon } from '../components/Icon';
 
 export function flowTitle(r: FlowRow, categories: readonly Category[]): string {
   return (
@@ -47,6 +48,16 @@ function Conteudo({ r, p }: { r: FlowRow; p: RowsProps }) {
           {p.showDate ? `${formatDate(r.date)} · ` : ''}
           {p.accountNames.get(r.accountId) ?? ''} · {cat}
           {r.edited ? ' · editado' : ''}
+          {r.attachments ? (
+            <span
+              className="rz-tx-clip"
+              aria-label={
+                r.attachments === 1 ? 'com comprovante' : `com ${String(r.attachments)} comprovantes`
+              }
+            >
+              <Icon name="clip" size={13} />
+            </span>
+          ) : null}
         </div>
       </div>
       <div className="rz-tx-right">

@@ -14,6 +14,7 @@ import type { OpsContext, WorkspaceFootprint } from './account-ops';
 import * as ops from './account-ops';
 import type { EntryOps } from './session-entries';
 import { entryOps } from './session-entries';
+import { runIntegrityCheck } from './integrity';
 import { defaultCategoryItems } from './category-defaults';
 import type { BackupFile, BackupPreview } from './backup';
 import { createBackup, openBackup, restoreBackup } from './backup';
@@ -121,6 +122,8 @@ function anotando(port: SessionPort, prefs: Prefs, clock: Clock, writes: WriteTr
     load: (id) => port.load(id),
     commit: (id, op) => anotar(port.commit(id, op)),
     hasOperation: (id, op) => port.hasOperation(id, op),
+    readBlob: (id, b) => port.readBlob(id, b),
+    verifyStorage: () => port.verifyStorage(),
     deleteWorkspace: (id) => anotar(port.deleteWorkspace(id)),
     exportWorkspaces: (ids) => port.exportWorkspaces(ids),
     importWorkspaces: (d, m, s) => anotar(port.importWorkspaces(d, m, s)),
@@ -339,6 +342,13 @@ export class VaultSession {
   setAccountArchived(workspaceId: string, input: Parameters<typeof ops.setAccountArchived>[2]) {
     return ops.setAccountArchived(this.ctx, workspaceId, input);
   }
+
+  /** CON-007: encerrar com saldo zero ou com transferência final. */
+  previewClose = (ws: string, accountId: string) => ops.previewClose(this.ctx, ws, accountId);
+  closeAccount = (ws: string, input: Parameters<typeof ops.closeAccount>[2]) =>
+    ops.closeAccount(this.ctx, ws, input);
+  /** BKP-007: relê tudo do disco e confere; nunca corrige. */
+  checkIntegrity = () => runIntegrityCheck(this.ctx);
 
   transfer(workspaceId: string, input: Parameters<typeof ops.transferBetween>[2]) {
     return ops.transferBetween(this.ctx, workspaceId, input);

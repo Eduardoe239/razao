@@ -1,6 +1,6 @@
 // Formatos de exibição do design system: "R$ 1.240,00", sinal com o caractere "−" (U+2212), datas dd/mm/aaaa.
 import type { CivilDate } from '@/domain/civil-date';
-import { formatCivilDate } from '@/domain/civil-date';
+import { formatCivilDate, isCivilDate } from '@/domain/civil-date';
 import { money } from '@/domain/money';
 import { formatMoney, parseMoneyInput } from '@/domain/money-text';
 import { formatRecoveryCode } from '@/domain/vault-policy';
@@ -26,6 +26,11 @@ export function readMoney(text: string, allowNegative = false): MoneyInput {
 
 export function formatDate(date: CivilDate): string {
   return formatCivilDate(date);
+}
+
+/** Data guardada como texto (aaaa-mm-dd), como a de encerramento da conta. */
+export function formatStoredDate(text: string): string {
+  return isCivilDate(text) ? formatCivilDate(text) : text;
 }
 
 /** O código aparece em 4 grupos de 6 (Volume 05, seção 3). */

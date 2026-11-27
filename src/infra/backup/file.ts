@@ -45,6 +45,11 @@ const workspaceSchema = z.object({
     z.object({ month: z.string().regex(/^\d{4}-\d{2}$/), events: z.array(auditEventSchema).max(1_000_000) }),
   ),
   operations: z.array(operationRecordSchema.omit({ workspaceId: true })).max(10_000_000),
+  // LAN-009: opcional, porque backups anteriores ao I-07 não têm comprovantes.
+  attachments: z
+    .array(z.object({ id, data: z.string().min(4).max(7_200_000) }))
+    .max(100_000)
+    .optional(),
 });
 const contentSchema = z.object({
   workspaces: z.array(workspaceSchema).max(10),
@@ -154,12 +159,19 @@ export function createBackupFilePort(options: KdfOptions = {}): BackupFilePort {
       const slot = await wrap(key, password, options.kdf ? await options.kdf() : await chooseKdf());
       const corpo = { workspaces: content };
       const contentHash = await sha256Hex(JSON.stringify(corpo));
-      return JSON.stringify({
+      const texto = JSON.stringify({
         header: h,
         key: slot,
         manifest: await cifrar(key, 'manifest', h, { manifest, contentHash }),
         content: await cifrar(key, 'content', h, { ...corpo, contentHash }),
       });
+      if (texto.length > MAX_BACKUP_CHARS) {
+        throw new AppError(
+          'INVALID',
+          'O backup passaria de 200 MB, o limite do arquivo, por causa dos comprovantes. Faça o backup de um espaço por vez. Nada foi gerado.',
+        );
+      }
+      return texto;
     },
 
     async read(text, password): Promise<BackupOpened> {
@@ -196,9 +208,10 @@ export function createBackupFilePort(options: KdfOptions = {}): BackupFilePort {
       if (!conteudo.success)
         throw new AppError('INVALID', 'O conteúdo do backup está fora do formato. Nada foi restaurado.');
       const { workspaces } = conteudo.data;
-      const content: BackupWorkspace[] = workspaces.map((w) => ({
+      const content: BackupWorkspace[] = workspaces.map(({ attachments, ...w }) => ({
         ...w,
         entities: w.entities.map((e) => ({ type: e.type, id: e.id, data: e.data })),
+        ...(attachments ? { attachments } : {}),
       }));
       return { header, manifest: man.manifest, content };
     },
