@@ -94,9 +94,15 @@ export function createVaultPort(o: AdapterOptions): VaultPort & { close(): Promi
   };
 
   const sessao = (db: Db, dek: CryptoKey): SessionPort =>
-    new IdbSession(db, dek, o.nowIso, () => {
-      banco = null;
-    });
+    new IdbSession(
+      db,
+      dek,
+      o.nowIso,
+      () => {
+        banco = null;
+      },
+      o.kdf,
+    );
 
   return {
     presence: () =>

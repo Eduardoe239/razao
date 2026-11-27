@@ -1,12 +1,11 @@
 // Conteúdo de cada etapa do primeiro acesso (Volume 02, seção 4; tela aprovada "Primeiro acesso").
 // Só apresentação: o estado e as gravações ficam no Onboarding.
-import { useState } from 'react';
-import { recoveryGroups } from '@/application/format';
 import type { AccountKind, Workspace } from '@/application/model';
 import { ACCOUNT_KIND_LABELS } from '@/application/model';
 import { checkPassword } from '@/application/vault-rules';
+import { CodeBox } from '../components/CodeBox';
 import { Icon } from '../components/Icon';
-import { Alert, Button, CheckCard, ChoiceCard, MoneyField, StrengthMeter, TextField } from '../components/ds';
+import { Alert, CheckCard, ChoiceCard, MoneyField, StrengthMeter, TextField } from '../components/ds';
 
 export function Welcome() {
   return (
@@ -127,30 +126,6 @@ export function CodeStep({
   guardou: boolean;
   onGuardou: () => void;
 }) {
-  const [copiado, setCopiado] = useState<string | null>(null);
-  const grupos = recoveryGroups(code);
-  const texto = grupos.join('-');
-  const copiar = () => {
-    navigator.clipboard.writeText(texto).then(
-      () => {
-        setCopiado('Código copiado. Cole num lugar seguro, fora deste aparelho.');
-      },
-      () => {
-        setCopiado('Não foi possível copiar. Anote o código à mão.');
-      },
-    );
-  };
-  const salvar = () => {
-    const conteudo = `O Razão: código de recuperação do cofre\n\n${texto}\n\nGuarde este arquivo fora deste aparelho. Quem tiver o código consegue abrir o cofre.\n`;
-    const url = URL.createObjectURL(new Blob([conteudo], { type: 'text/plain;charset=utf-8' }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'razao-codigo-de-recuperacao.txt';
-    a.click();
-    window.setTimeout(() => {
-      URL.revokeObjectURL(url);
-    }, 1000);
-  };
   return (
     <>
       <div className="rz-ob-intro">
@@ -159,28 +134,7 @@ export function CodeStep({
           Se esquecer a senha, só este código abre o cofre. Guarde fora deste aparelho.
         </p>
       </div>
-      <div
-        className="rz-card rz-code"
-        aria-label={`Código de recuperação: ${grupos.join(', ')}`}
-        data-testid="codigo"
-      >
-        {grupos.map((g) => (
-          <span key={g}>{g}</span>
-        ))}
-      </div>
-      <div className="rz-two">
-        <Button icon="copy" onClick={copiar}>
-          Copiar
-        </Button>
-        <Button icon="download" onClick={salvar}>
-          Salvar arquivo
-        </Button>
-      </div>
-      {copiado ? (
-        <p className="rz-help" role="status">
-          {copiado}
-        </p>
-      ) : null}
+      <CodeBox code={code} />
       <CheckCard checked={guardou} onToggle={onGuardou}>
         Guardei o código em um lugar seguro
       </CheckCard>

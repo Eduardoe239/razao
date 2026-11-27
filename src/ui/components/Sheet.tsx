@@ -37,6 +37,9 @@ export function Sheet({
       className={bottom ? 'rz-sheet rz-sheet-bottom' : 'rz-sheet'}
       aria-labelledby={id}
       onCancel={(e) => {
+        // O seletor de arquivo fechado sem escolha também dispara "cancel", e ele sobe até aqui; só o Esc
+        // do próprio painel fecha o painel.
+        if (e.target !== e.currentTarget) return;
         e.preventDefault();
         onClose();
       }}

@@ -1,0 +1,222 @@
+{
+  "format": "orazao-backup",
+  "formatVersion": 1,
+  "createdAt": "2026-11-20T15:30:00.000Z",
+  "payload": {
+    "schemaVersion": 4,
+    "state": {
+      "version": 4,
+      "schemaVersion": 4,
+      "accounts": [
+        {
+          "id": "acc-1",
+          "name": "Banco Azul",
+          "initialBalanceCents": 250000,
+          "profileType": "PF"
+        },
+        {
+          "id": "acc-2",
+          "name": "Carteira",
+          "initialBalanceCents": 15000,
+          "profileType": "PF"
+        },
+        {
+          "id": "acc-pj-1",
+          "name": "Conta da empresa",
+          "initialBalanceCents": 500000,
+          "profileType": "PJ"
+        }
+      ],
+      "cards": [
+        {
+          "id": "card-1",
+          "name": "Cartão Roxo",
+          "limitCents": 300000,
+          "closingDay": 10,
+          "dueDay": 20,
+          "profileType": "PF"
+        }
+      ],
+      "categories": [
+        {
+          "id": "cat-1",
+          "name": "Alimentação",
+          "type": "despesa",
+          "profileType": "PF"
+        },
+        {
+          "id": "cat-2",
+          "name": "Salário",
+          "type": "receita",
+          "profileType": "PF"
+        },
+        {
+          "id": "cat-3",
+          "name": "Pets",
+          "type": "despesa",
+          "profileType": "PF"
+        },
+        {
+          "id": "cat-pj-1",
+          "name": "Vendas",
+          "type": "receita",
+          "profileType": "PJ"
+        },
+        {
+          "id": "cat-pj-2",
+          "name": "Fornecedores",
+          "type": "despesa",
+          "profileType": "PJ"
+        }
+      ],
+      "transactions": [
+        {
+          "id": "tx-1",
+          "description": "Salário de outubro",
+          "amountCents": 520000,
+          "type": "receita",
+          "status": "pago",
+          "date": "2026-10-05",
+          "accountId": "acc-1",
+          "categoryId": "cat-2",
+          "profileType": "PF"
+        },
+        {
+          "id": "tx-2",
+          "description": "Mercado do bairro",
+          "amountCents": 18990,
+          "type": "despesa",
+          "status": "pago",
+          "date": "2026-10-08",
+          "accountId": "acc-1",
+          "categoryId": "cat-1",
+          "profileType": "PF"
+        },
+        {
+          "id": "tx-3",
+          "description": "Ração e banho",
+          "amountCents": 12000,
+          "type": "despesa",
+          "status": "pago",
+          "date": "2026-10-09",
+          "accountId": "acc-2",
+          "categoryId": "cat-3",
+          "profileType": "PF"
+        },
+        {
+          "id": "tx-4",
+          "description": "Saque para a carteira",
+          "amountCents": 20000,
+          "type": "transferencia",
+          "status": "pago",
+          "date": "2026-10-10",
+          "accountId": "acc-1",
+          "toAccountId": "acc-2",
+          "profileType": "PF"
+        },
+        {
+          "id": "tx-5",
+          "description": "Conta de luz",
+          "amountCents": 23450,
+          "type": "despesa",
+          "status": "pendente",
+          "date": "2026-11-15",
+          "accountId": "acc-1",
+          "profileType": "PF"
+        },
+        {
+          "id": "tx-6",
+          "description": "Compra cancelada",
+          "amountCents": 9900,
+          "type": "despesa",
+          "status": "cancelado",
+          "date": "2026-10-11",
+          "accountId": "acc-1",
+          "categoryId": "cat-1",
+          "profileType": "PF"
+        },
+        {
+          "id": "tx-7",
+          "description": "Restaurante no cartão",
+          "amountCents": 8750,
+          "type": "despesa",
+          "status": "pago",
+          "date": "2026-10-12",
+          "accountId": "card-1",
+          "categoryId": "cat-1",
+          "profileType": "PF"
+        },
+        {
+          "id": "tx-8",
+          "description": "Pagamento da fatura",
+          "amountCents": 8750,
+          "type": "transferencia",
+          "status": "pago",
+          "date": "2026-10-20",
+          "accountId": "acc-1",
+          "toAccountId": "card-1",
+          "linkedInvoiceKey": "2026-10",
+          "linkedCardId": "card-1",
+          "profileType": "PF"
+        },
+        {
+          "id": "tx-9",
+          "description": "Venda de serviço",
+          "amountCents": 150000,
+          "type": "receita",
+          "status": "pago",
+          "date": "2026-10-03",
+          "accountId": "acc-pj-1",
+          "categoryId": "cat-pj-1",
+          "profileType": "PJ"
+        },
+        {
+          "id": "tx-10",
+          "description": "Compra de material",
+          "amountCents": 42000,
+          "type": "despesa",
+          "status": "pago",
+          "date": "2026-10-06",
+          "accountId": "acc-pj-1",
+          "categoryId": "cat-pj-2",
+          "profileType": "PJ"
+        },
+        {
+          "id": "tx-11",
+          "description": "Conta que não existe mais",
+          "amountCents": 5000,
+          "type": "despesa",
+          "status": "pago",
+          "date": "2026-10-07",
+          "accountId": "acc-apagada",
+          "categoryId": "cat-1",
+          "profileType": "PF"
+        }
+      ],
+      "recurring": [
+        {
+          "id": "rec-1",
+          "description": "Aluguel",
+          "amountCents": 150000,
+          "type": "despesa",
+          "dayOfMonth": 5,
+          "active": true,
+          "accountId": "acc-1",
+          "profileType": "PF"
+        }
+      ],
+      "budgets": {
+        "cat-1": 80000
+      },
+      "auditLog": [
+        {
+          "id": "a-1",
+          "action": "create",
+          "at": "2026-10-05T12:00:00.000Z"
+        }
+      ],
+      "settings": {}
+    }
+  },
+  "checksum": "04032782"
+}

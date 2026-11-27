@@ -3,6 +3,7 @@ import { AppError } from '@/application/errors';
 import { ledgerAccountDataSchema } from '@/application/model';
 import type {
   BackupWorkspace,
+  Credential,
   RestorePoint,
   SessionPort,
   StorageCheck,
@@ -21,6 +22,10 @@ import type { WorkspaceState } from './storage/repository';
 import { VaultRepository } from './storage/repository';
 import { listSnapshots, restoreSnapshot } from './storage/snapshots';
 import { deleteWorkspaceData } from './storage/workspace-delete';
+import { readVault, updateVaultKeys } from './storage/vault-store';
+import type { KdfOptions } from './crypto/vault-keys';
+import { assertHeader, changePassword, rotateRecoveryCode, unlockVault } from './crypto/vault-keys';
+import { generateRecoveryCode } from './crypto/recovery';
 
 /** Sessão aberta sobre o repositório do I-04. Guarda em memória o estado de cada espaço lido. */
 export class IdbSession implements SessionPort {
@@ -33,6 +38,7 @@ export class IdbSession implements SessionPort {
     private readonly dek: CryptoKey,
     private readonly nowIso: () => string,
     private readonly onClose: () => void,
+    private readonly kdf: KdfOptions = {},
   ) {
     this.repo = new VaultRepository(db, dek, SCHEMA_VERSION, nowIso);
   }
@@ -100,6 +106,40 @@ export class IdbSession implements SessionPort {
     } finally {
       this.recomecar();
     }
+  }
+
+  async changeKeys(current: Credential, change: { password?: string; recoveryCode?: string }): Promise<void> {
+    this.aberta();
+    return guarded(async () => {
+      const row = await readVault(this.db);
+      if (!row)
+        throw new AppError('STORAGE', 'O cofre não foi encontrado neste navegador. Nada foi trocado.');
+      assertHeader(row.keys);
+      // As duas trocas usam a credencial de antes; o cabeçalho é gravado uma vez só, com as duas juntas.
+      let header = row.keys;
+      if (change.password !== undefined)
+        header = await changePassword(header, current, change.password, this.kdf);
+      if (change.recoveryCode !== undefined)
+        header = await rotateRecoveryCode(header, current, change.recoveryCode, this.kdf);
+      await updateVaultKeys(this.db, header);
+    });
+  }
+
+  async checkCredential(cred: Credential): Promise<boolean> {
+    this.aberta();
+    const row = await guarded(() => readVault(this.db));
+    if (!row) return false;
+    try {
+      assertHeader(row.keys);
+      await unlockVault(row.keys, cred);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  newRecoveryCode(): string {
+    return generateRecoveryCode();
   }
 
   get safeMode(): boolean {

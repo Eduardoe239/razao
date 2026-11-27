@@ -84,7 +84,9 @@ export function createRazaoApp(deps: {
       try {
         const port = await vault.unlock(cred);
         vault.recordAttempt(true, clock.nowMs(), 0);
-        return new VaultSession(port, clock, ids, extras);
+        const session = new VaultSession(port, clock, ids, extras);
+        if ('recoveryCode' in cred) session.markOpenedByRecovery(cred.recoveryCode);
+        return session;
       } catch (erro) {
         if (erro instanceof AppError && erro.code === 'WRONG_SECRET') {
           const falhas = vault.attempts().failed + 1;

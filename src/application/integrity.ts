@@ -3,6 +3,7 @@
 import { checkJournal } from '@/domain/integrity';
 import type { OpsContext } from './account-ops';
 import { attachmentsOf, workspaceOf } from './session-read';
+import { workspaceLabel } from './model';
 import type { StorageIssue, WorkspaceStorageCheck } from './ports';
 
 export interface IntegrityItem {
@@ -38,7 +39,7 @@ async function doEspaco(c: OpsContext, w: WorkspaceStorageCheck): Promise<Worksp
   let label = 'Espaço';
   try {
     const ws = workspaceOf(snap);
-    label = ws.kind === 'PF' ? 'Pessoal' : ws.name;
+    label = workspaceLabel(ws);
   } catch {
     // O registro do espaço não abriu: o item "Registros" já mostra o problema.
   }

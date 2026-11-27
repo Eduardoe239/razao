@@ -107,6 +107,29 @@ export function WorkspaceSwitch({
   useEffect(() => {
     thumb.current?.classList.add('rz-seg-ready');
   }, []);
+  // Com espaços restaurados ou importados (D-054), a lista não cabe em botões: vira uma escolha compacta.
+  if (options.length > 2) {
+    const ativo = options.find((o) => o.id === value);
+    return (
+      <span className="rz-ws-select-wrap">
+        <span className={`rz-dot rz-dot-${ativo?.tone ?? 'pf'}`} aria-hidden="true" />
+        <select
+          className="rz-ws-select"
+          aria-label="Espaço"
+          value={value}
+          onChange={(e) => {
+            onChange(e.target.value);
+          }}
+        >
+          {options.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </span>
+    );
+  }
   return (
     <div ref={box} className="rz-seg rz-seg-sliding" role="group" aria-label="Espaço">
       <span ref={thumb} className="rz-seg-thumb" aria-hidden="true" style={{ opacity: 0 }} />

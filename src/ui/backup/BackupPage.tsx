@@ -12,7 +12,9 @@ import { Alert, Badge, Button, TextField } from '../components/ds';
 import { SelectField, Sheet } from '../components/Sheet';
 import { useRazao } from '../context';
 import { CreateBackupSheet, RestoreBackupSheet, quando } from './BackupSheets';
+import { Beta20Sheet } from './Beta20Sheet';
 import { IntegrityCard } from './IntegrityCard';
+import { ChangePasswordSheet, NewRecoveryCodeSheet } from './SecuritySheets';
 
 const mb = (bytes: number) =>
   `${(bytes / 1_048_576).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} MB`;
@@ -73,7 +75,8 @@ function ApagarTudoSheet(p: { onClose: () => void; onWiped: () => void }) {
   );
 }
 
-type Painel = 'backup' | 'restaurar' | 'apagar' | { volta: RestorePoint } | null;
+type Painel =
+  'backup' | 'restaurar' | 'apagar' | 'senha' | 'codigo' | 'beta20' | { volta: RestorePoint } | null;
 
 export function BackupPage(p: {
   session: VaultSession;
@@ -184,6 +187,34 @@ export function BackupPage(p: {
         </div>
       </section>
 
+      <section className="rz-card rz-section" aria-labelledby="senha-codigo">
+        <h2 id="senha-codigo" className="rz-section-title">
+          Senha e código de recuperação
+        </h2>
+        <p className="rz-ob-lead">
+          A senha abre o cofre neste aparelho. O código abre quando a senha é esquecida. Trocar um não muda os
+          dados.
+        </p>
+        <div className="rz-actions">
+          <Button
+            icon="lock"
+            onClick={() => {
+              setPainel('senha');
+            }}
+          >
+            Trocar a senha
+          </Button>
+          <Button
+            icon="shield"
+            onClick={() => {
+              setPainel('codigo');
+            }}
+          >
+            Gerar código novo
+          </Button>
+        </div>
+      </section>
+
       <section className="rz-card rz-section" aria-labelledby="lembrete">
         <h2 id="lembrete" className="rz-section-title">
           Lembrete
@@ -240,6 +271,26 @@ export function BackupPage(p: {
         </section>
       ) : null}
 
+      <section className="rz-card rz-section" aria-labelledby="beta20">
+        <h2 id="beta20" className="rz-section-title">
+          Importar da beta.20
+        </h2>
+        <p className="rz-ob-lead">
+          Traz os dados da versão antiga a partir do arquivo de backup dela. Entram em espaços novos, ao lado
+          dos atuais, com prévia antes.
+        </p>
+        <div>
+          <Button
+            icon="share"
+            onClick={() => {
+              setPainel('beta20');
+            }}
+          >
+            Importar arquivo da beta.20
+          </Button>
+        </div>
+      </section>
+
       <section className="rz-card rz-section" aria-labelledby="apagar">
         <h2 id="apagar" className="rz-section-title">
           Apagar tudo
@@ -272,6 +323,13 @@ export function BackupPage(p: {
         <RestoreBackupSheet session={p.session} onClose={fechar} onDone={feito} />
       ) : null}
       {painel === 'apagar' ? <ApagarTudoSheet onClose={fechar} onWiped={p.onWiped} /> : null}
+      {painel === 'senha' ? (
+        <ChangePasswordSheet session={p.session} onClose={fechar} onDone={feito} />
+      ) : null}
+      {painel === 'codigo' ? (
+        <NewRecoveryCodeSheet session={p.session} onClose={fechar} onDone={feito} />
+      ) : null}
+      {painel === 'beta20' ? <Beta20Sheet session={p.session} onClose={fechar} onDone={feito} /> : null}
       {painel !== null && typeof painel === 'object' ? (
         <Sheet title="Voltar a um ponto" onClose={fechar}>
           <Alert tone="warning" title={`Voltar ao estado de ${quando(painel.volta.createdAt)}`}>

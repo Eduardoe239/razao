@@ -1,7 +1,6 @@
 // Cofre aberto: casos de uso dos espaços e das contas da Alpha 1 (COF-004, COF-005, CON-001, CON-003).
 // Cada caso de uso monta a operação inteira e grava de uma vez; a interface nunca fala com o armazenamento.
 import type { CivilDate } from '@/domain/civil-date';
-import { DomainError } from '@/domain/errors';
 import type { LedgerAccount } from '@/domain/ledger';
 import { balancesAt } from '@/domain/ledger';
 import { money } from '@/domain/money';
@@ -18,6 +17,10 @@ import { runIntegrityCheck } from './integrity';
 import { defaultCategoryItems } from './category-defaults';
 import type { BackupFile, BackupPreview } from './backup';
 import { createBackup, openBackup, restoreBackup } from './backup';
+import { importNewSpaces, restoreAsNew } from './restore-new';
+import type { Beta20Plan } from './beta20-build';
+import { buildBeta20 } from './beta20-build';
+import { readBeta20 } from './beta20-file';
 import type {
   BackupFilePort,
   BackupScope,
@@ -29,7 +32,13 @@ import type {
   StoredItem,
 } from './ports';
 import type { BackupStatus, Prefs } from './reminder';
-import { PREF, backupStatus, noteChange } from './reminder';
+import { PREF, backupStatus } from './reminder';
+import type { WriteTracker } from './session-port';
+import { anotando } from './session-port';
+import type { SecurityOps } from './session-security';
+import { securityOps } from './session-security';
+
+export { WriteTracker } from './session-port';
 
 export interface AccountView {
   readonly account: Account;
@@ -60,15 +69,7 @@ export interface NewAccount {
   readonly operationId: string;
 }
 
-/** Converte erro do domínio em erro que a interface mostra, sem esconder a causa. */
-function domainSafe<T>(fn: () => T): T {
-  try {
-    return fn();
-  } catch (erro) {
-    if (erro instanceof DomainError) throw new AppError('INVALID', erro.message, { cause: erro });
-    throw erro;
-  }
-}
+const domainSafe = ops.domainSafe;
 
 const ORDEM: Record<WorkspaceKind, number> = { PF: 0, PJ: 1 };
 
@@ -76,63 +77,6 @@ export interface SessionExtras {
   readonly file: BackupFilePort;
   readonly prefs: Prefs;
   readonly writes: WriteTracker;
-}
-
-/** Conta as gravações em andamento, para a atualização do app nunca recarregar no meio de uma (SEC-05). */
-export class WriteTracker {
-  private emAndamento = 0;
-  private espera: (() => void)[] = [];
-
-  async track<T>(p: Promise<T>): Promise<T> {
-    this.emAndamento++;
-    try {
-      return await p;
-    } finally {
-      this.emAndamento--;
-      if (this.emAndamento === 0) for (const f of this.espera.splice(0)) f();
-    }
-  }
-
-  get busy(): boolean {
-    return this.emAndamento > 0;
-  }
-
-  /** Resolve quando não houver nenhuma gravação em andamento. */
-  idle(): Promise<void> {
-    return this.emAndamento === 0 ? Promise.resolve() : new Promise((r) => this.espera.push(r));
-  }
-}
-
-/** Envolve a porta para anotar cada gravação (lembrete de backup, PERS-04). */
-function anotando(port: SessionPort, prefs: Prefs, clock: Clock, writes: WriteTracker): SessionPort {
-  const anotar = <T>(p: Promise<T>) =>
-    writes.track(p).then((r) => {
-      noteChange(prefs, clock.nowIso());
-      return r;
-    });
-  return {
-    get schemaVersion() {
-      return port.schemaVersion;
-    },
-    get safeMode() {
-      return port.safeMode;
-    },
-    issues: () => port.issues(),
-    workspaceIds: () => port.workspaceIds(),
-    load: (id) => port.load(id),
-    commit: (id, op) => anotar(port.commit(id, op)),
-    hasOperation: (id, op) => port.hasOperation(id, op),
-    readBlob: (id, b) => port.readBlob(id, b),
-    verifyStorage: () => port.verifyStorage(),
-    deleteWorkspace: (id) => anotar(port.deleteWorkspace(id)),
-    exportWorkspaces: (ids) => port.exportWorkspaces(ids),
-    importWorkspaces: (d, m, s) => anotar(port.importWorkspaces(d, m, s)),
-    restorePoints: () => port.restorePoints(),
-    undoRestore: (s, b) => anotar(port.undoRestore(s, b)),
-    close: () => {
-      port.close();
-    },
-  };
 }
 
 export class VaultSession {
@@ -145,6 +89,16 @@ export class VaultSession {
     private readonly extras: SessionExtras,
   ) {
     this.port = anotando(port, extras.prefs, clock, extras.writes);
+    this.security = securityOps(this.port, this.aberturaPorCodigo);
+  }
+
+  /** COF-003 e D-054: senha e código de recuperação. */
+  readonly security: SecurityOps;
+  private readonly aberturaPorCodigo: { recoveryCode: string | null } = { recoveryCode: null };
+
+  /** O app marca quando o cofre foi aberto pelo código, para oferecer a troca (D-042, item 6). */
+  markOpenedByRecovery(code: string): void {
+    this.aberturaPorCodigo.recoveryCode = code;
   }
 
   private get backupDeps() {
@@ -178,6 +132,20 @@ export class VaultSession {
     return restoreBackup(this.backupDeps, this.port, preview);
   }
 
+  /** D-046: cada espaço do backup entra como espaço novo, ao lado dos atuais. Devolve os ids novos. */
+  restoreAsNew = (preview: BackupPreview) => restoreAsNew(this.backupDeps, this.port, preview);
+
+  /** BKP-008: lê o arquivo da beta.20 e monta a prévia, sem gravar nada. */
+  previewBeta20 = (text: string): Beta20Plan =>
+    buildBeta20(readBeta20(text), {
+      ids: this.ids,
+      now: this.clock.nowIso(),
+      timeZone: this.clock.deviceTimeZone(),
+    });
+
+  /** BKP-008: grava os espaços da prévia e reconta; se não bater, desfaz. */
+  importBeta20 = (plan: Beta20Plan) => importNewSpaces(this.backupDeps, this.port, plan.content);
+
   restorePoints(): Promise<RestorePoint[]> {
     return this.port.restorePoints();
   }
@@ -208,13 +176,18 @@ export class VaultSession {
     const ids = await this.port.workspaceIds();
     const lista: Workspace[] = [];
     for (const id of ids) lista.push(workspaceOf(await this.port.load(id)));
-    return lista.sort((a, b) => ORDEM[a.kind] - ORDEM[b.kind] || a.createdAt.localeCompare(b.createdAt));
+    // Os de sempre primeiro; os que vieram de backup ou da beta.20 depois (D-054).
+    const extra = (w: Workspace) => (w.origin ? 1 : 0);
+    return lista.sort(
+      (a, b) =>
+        extra(a) - extra(b) || ORDEM[a.kind] - ORDEM[b.kind] || a.createdAt.localeCompare(b.createdAt),
+    );
   }
 
   /** COF-004: cria o espaço com moeda, fuso e início do mês, e as contas internas do livro-razão. */
   async createWorkspace(input: NewWorkspace): Promise<Workspace> {
     this.assertWritable();
-    const existente = (await this.workspaces()).find((w) => w.kind === input.kind);
+    const existente = (await this.workspaces()).find((w) => w.kind === input.kind && !w.origin);
     if (existente) {
       const nome = input.kind === 'PF' ? 'Pessoal' : 'Negócio';
       throw new AppError(

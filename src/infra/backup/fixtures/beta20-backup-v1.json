@@ -1,0 +1,47 @@
+{
+  "format": "orazao-backup",
+  "formatVersion": 1,
+  "createdAt": "2025-03-10T10:00:00.000Z",
+  "payload": {
+    "schemaVersion": 1,
+    "state": {
+      "version": 1,
+      "accounts": [
+        {
+          "id": "acc-1",
+          "name": "Conta Principal",
+          "initialBalanceCents": 100000
+        }
+      ],
+      "categories": [
+        {
+          "id": "cat-1",
+          "name": "Alimentação",
+          "type": "despesa"
+        }
+      ],
+      "transactions": [
+        {
+          "id": "t1",
+          "description": "Padaria",
+          "amount": 45.9,
+          "type": "despesa",
+          "status": "pago",
+          "date": "2025-03-02",
+          "accountId": "acc-1",
+          "categoryId": "cat-1"
+        },
+        {
+          "id": "t2",
+          "description": "Pix recebido",
+          "amount": 120,
+          "type": "receita",
+          "status": "pago",
+          "date": "2025-03-03",
+          "accountId": "acc-1"
+        }
+      ]
+    }
+  },
+  "checksum": "b9225193"
+}

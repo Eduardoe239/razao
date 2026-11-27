@@ -117,15 +117,18 @@ async function selarEspaco(
     digests[p.month] = await digest(sealed);
     out.push({ store: 'journal', key: [ws, p.month], sealed });
   }
-  // A trilha original continua; o evento de restauração entra no fim da corrente.
-  const eventos = w.audit.flatMap((p) => p.events as unknown as AuditEvent[]).sort((a, b) => a.seq - b.seq);
+  // A trilha original continua; o evento de restauração entra no fim da corrente. Espaço novo (D-054)
+  // começa a trilha do zero, com um evento que diz de onde os dados vieram.
+  const eventos = w.origin
+    ? []
+    : w.audit.flatMap((p) => p.events as unknown as AuditEvent[]).sort((a, b) => a.seq - b.seq);
   const ultimo = eventos.at(-1);
   const novo: AuditInput = {
     at: now,
-    action: 'backup.restaurar',
+    action: w.origin?.action ?? 'backup.restaurar',
     workspaceId: ws,
     target: `workspace/${ws}`,
-    after: { journalPages: digests },
+    after: { ...(w.origin?.after ?? {}), journalPages: digests },
   };
   const evento = await chainEvent(novo, ultimo ? { seq: ultimo.seq, hash: ultimo.hash } : null);
   const porMes = new Map<string, AuditEvent[]>();

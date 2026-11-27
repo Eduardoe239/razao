@@ -243,7 +243,7 @@ export function describePreview(preview: BackupPreview): PreviewLine[] {
     }, 0);
     return {
       workspaceId: w.workspaceId,
-      label: w.kind === 'PJ' ? (w.name ?? 'Negócio') : 'Pessoal',
+      label: w.kind === 'PJ' ? (w.name ?? 'Negócio') : (w.name ?? 'Pessoal'),
       kind: w.kind,
       accounts: contas.length,
       entries: w.counts.entries,

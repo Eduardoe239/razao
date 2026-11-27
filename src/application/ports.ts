@@ -93,6 +93,15 @@ export interface SessionPort {
    * e decifra cada comprovante. Problema achado deixa o cofre em modo seguro; nada é corrigido.
    */
   verifyStorage(): Promise<StorageCheck>;
+  /**
+   * COF-003 e D-054: troca a senha, o código de recuperação ou os dois, com a credencial atual. Só o cabeçalho
+   * de chaves muda; nenhum dado é regravado. Lança AppError WRONG_SECRET se a credencial atual não abrir.
+   */
+  changeKeys(current: Credential, change: { password?: string; recoveryCode?: string }): Promise<void>;
+  /** Confere a credencial sem mudar nada (antes de mostrar um código novo, por exemplo). */
+  checkCredential(cred: Credential): Promise<boolean>;
+  /** Código de recuperação novo, do gerador do navegador. Só vale depois de `changeKeys`. */
+  newRecoveryCode(): string;
   /** COF-007: apaga tudo o que é do espaço, inclusive dos snapshots. Não tem volta. */
   deleteWorkspace(workspaceId: string): Promise<void>;
   /** BKP-001: tudo dos espaços pedidos, decifrado e validado, para ir ao arquivo de backup. */
@@ -132,6 +141,11 @@ export interface BackupWorkspace {
   }[];
   /** LAN-009: arquivos dos comprovantes, em base64. Backups anteriores ao I-07 não têm. */
   readonly attachments?: readonly { readonly id: string; readonly data: string }[];
+  /**
+   * D-054: espaço novo (restaurado como novo ou importado da beta.20). A trilha começa do zero com este
+   * evento, que registra de onde os dados vieram. Nunca vai para o arquivo de backup.
+   */
+  readonly origin?: { readonly action: string; readonly after: Readonly<Record<string, unknown>> };
 }
 
 export interface AuditEventData {

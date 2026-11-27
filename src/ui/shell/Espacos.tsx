@@ -5,11 +5,12 @@ import type { WorkspaceFootprint } from '@/application/account-ops';
 import { DELETE_WORD } from '@/application/account-ops';
 import { messageFor } from '@/application/errors';
 import type { Workspace, WorkspaceKind } from '@/application/model';
+import { workspaceLabel } from '@/application/model';
 import type { VaultSession } from '@/application/session';
 import { Alert, Badge, Button, TextField } from '../components/ds';
 import { Sheet } from '../components/Sheet';
 
-const rotulo = (w: Workspace) => (w.kind === 'PF' ? 'Pessoal' : w.name);
+const rotulo = (w: Workspace) => workspaceLabel(w);
 
 function plural(n: number, um: string, varios: string) {
   return `${String(n)} ${n === 1 ? um : varios}`;
@@ -37,7 +38,7 @@ function ExcluirSheet(p: {
       setBusy(false);
     }
   };
-  const nome = p.ws.kind === 'PF' ? 'Pessoal' : 'Negócio';
+  const nome = workspaceLabel(p.ws, true);
   return (
     <Sheet title={`Excluir o espaço ${nome}`} onClose={p.onClose}>
       <form className="rz-form" onSubmit={(e) => void enviar(e)} noValidate>

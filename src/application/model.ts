@@ -19,8 +19,17 @@ export const workspaceSchema = z.object({
   feeExpenseId: z.string().min(1).max(200),
   archived: z.boolean(),
   createdAt: z.string().max(40),
+  /** D-054: espaço que veio de um backup restaurado como novo ou da beta.20; fica ao lado dos outros. */
+  origin: z.object({ kind: z.enum(['backup', 'beta20']), at: z.string().max(40) }).optional(),
 });
 export type Workspace = z.infer<typeof workspaceSchema>;
+
+/** Nome do espaço na tela. O Pessoal e o Negócio de sempre têm nome fixo no seletor; os que vieram de fora, o deles. */
+export function workspaceLabel(w: Pick<Workspace, 'kind' | 'name' | 'origin'>, short = false): string {
+  if (w.origin) return w.name;
+  if (w.kind === 'PF') return 'Pessoal';
+  return short ? 'Negócio' : w.name;
+}
 
 export const ACCOUNT_KINDS = [
   'corrente',
@@ -123,4 +132,17 @@ export const ENTITY = {
   categoryRule: 'category-rule',
   alertDismissal: 'alert-dismissal',
   attachment: 'attachment',
+  importQuarantine: 'import-quarantine',
 } as const;
+
+/** BKP-008: o que veio da beta.20 e não pôde virar lançamento. Fica cifrado no espaço, com o motivo. */
+export const importQuarantineSchema = z.object({
+  id: z.string().min(1).max(200),
+  source: z.literal('beta20'),
+  label: z.string().max(200),
+  reason: z.string().max(300),
+  /** O registro original, em JSON, para conferência. */
+  original: z.string().max(4000),
+  createdAt: z.string().max(40),
+});
+export type ImportQuarantineItem = z.infer<typeof importQuarantineSchema>;

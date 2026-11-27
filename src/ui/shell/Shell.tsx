@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { messageFor } from '@/application/errors';
 import type { Workspace } from '@/application/model';
+import { workspaceLabel } from '@/application/model';
 import type { VaultSession, WorkspaceView } from '@/application/session';
 import { Alert, Badge, Button } from '../components/ds';
 import { Icon } from '../components/Icon';
 import { Toast } from '../components/Sheet';
 import { Tabs, WorkspaceSwitch } from '../components/Tabs';
 import { BackupPage } from '../backup/BackupPage';
+import { RecoveryOfferSheet } from '../backup/SecuritySheets';
 import { useRazao } from '../context';
 import { Espacos } from './Espacos';
 import type { Route } from './nav';
@@ -106,6 +108,8 @@ export function Shell(p: {
     setVersao((v) => v + 1);
   }, []);
   const [novo, setNovo] = useState(false);
+  // D-042, item 6: aberto pelo código de recuperação, o app oferece senha e código novos.
+  const [oferta, setOferta] = useState(() => session.security.openedByRecovery);
 
   const trocarEspaco = (id: string) => {
     const novo = ativos.find((w) => w.id === id);
@@ -123,7 +127,7 @@ export function Shell(p: {
   const tom = kind === 'PJ' ? 'pj' : 'pf';
   const opcoes = ativos.map((w) => ({
     id: w.id,
-    label: w.kind === 'PF' ? 'Pessoal' : 'Negócio',
+    label: workspaceLabel(w, true),
     tone: w.kind === 'PJ' ? ('pj' as const) : ('pf' as const),
   }));
   const seletor =
@@ -132,7 +136,7 @@ export function Shell(p: {
     ) : (
       <span className="rz-space-tag">
         <span className={`rz-dot rz-dot-${tom}`} aria-hidden="true" />
-        <span>{kind === 'PF' ? 'Pessoal' : 'Negócio'}</span>
+        <span>{ws ? workspaceLabel(ws, true) : ''}</span>
       </span>
     );
   const visivel = carga.t === 'ok' && carga.view.workspace.id === wsId ? carga.view : null;
@@ -146,7 +150,7 @@ export function Shell(p: {
           <div className="rz-top-space">
             <span className="rz-only-mobile">{seletor}</span>
             <span className="rz-only-desktop">
-              <Badge tone={tom}>{ws ? (ws.kind === 'PF' ? 'Pessoal' : ws.name) : ''}</Badge>
+              <Badge tone={tom}>{ws ? workspaceLabel(ws) : ''}</Badge>
             </span>
           </div>
           <Button
@@ -184,7 +188,7 @@ export function Shell(p: {
             <p className="rz-page-q">
               {config
                 ? rota.sub === 'categorias'
-                  ? `Do espaço ${kind === 'PF' ? 'Pessoal' : 'Negócio'}`
+                  ? `Do espaço ${ws ? workspaceLabel(ws, true) : ''}`
                   : rota.sub === 'ia'
                     ? 'Neste aparelho, sem internet'
                     : 'Configurações deste aparelho'
@@ -287,6 +291,18 @@ export function Shell(p: {
           )}
         </nav>
       </div>
+      {oferta ? (
+        <RecoveryOfferSheet
+          session={session}
+          onClose={() => {
+            setOferta(false);
+          }}
+          onDone={(m) => {
+            setOferta(false);
+            mudou(m);
+          }}
+        />
+      ) : null}
       {novo && visivel ? (
         <NewEntrySheet
           session={session}

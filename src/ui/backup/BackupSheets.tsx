@@ -43,7 +43,7 @@ export function CreateBackupSheet(p: {
     { id: 'cofre', label: 'Cofre inteiro', scope: { kind: 'cofre' } },
     ...ativos.map((w) => ({
       id: w.id,
-      label: w.kind === 'PF' ? 'Só o Pessoal' : `Só o Negócio`,
+      label: w.origin ? `Só ${w.name}` : w.kind === 'PF' ? 'Só o Pessoal' : `Só o Negócio`,
       scope: { kind: 'espaco' as const, workspaceId: w.id },
     })),
   ];
@@ -219,6 +219,7 @@ export function RestoreBackupSheet(p: {
   onDone: (m: string) => void;
 }) {
   const [previa, setPrevia] = useState<BackupPreview | null>(null);
+  const [modo, setModo] = useState<'substituir' | 'novo'>('substituir');
   const [busy, setBusy] = useState(false);
   const [erro, setErro] = useState<string | undefined>();
   const restaurar = async () => {
@@ -226,6 +227,13 @@ export function RestoreBackupSheet(p: {
     setBusy(true);
     setErro(undefined);
     try {
+      if (modo === 'novo') {
+        const novos = await p.session.restoreAsNew(previa);
+        p.onDone(
+          `${novos.length === 1 ? 'Espaço novo criado' : 'Espaços novos criados'} a partir do backup e conferidos: contagens e saldos batem com a prévia.`,
+        );
+        return;
+      }
       await p.session.restoreBackup(previa);
       p.onDone('Backup restaurado e conferido: contagens e saldos batem com a prévia.');
     } catch (falha) {
@@ -241,12 +249,43 @@ export function RestoreBackupSheet(p: {
       ) : (
         <>
           <PreviewCard preview={previa} />
-          <Alert tone="warning" title={tudo ? 'Substitui o cofre inteiro' : 'Substitui este espaço'}>
-            {tudo
-              ? 'Todos os espaços deste aparelho ficam iguais ao backup.'
-              : 'O espaço do backup fica igual ao arquivo; o outro espaço não muda.'}{' '}
-            Antes, o estado atual vira um ponto de volta, e você pode voltar a ele depois.
-          </Alert>
+          <fieldset className="rz-fieldset">
+            <legend className="rz-label">Como restaurar</legend>
+            <div role="radiogroup" aria-label="Como restaurar" className="rz-chips">
+              {(
+                [
+                  ['substituir', 'Substituir pelo backup'],
+                  ['novo', 'Como espaço novo'],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="radio"
+                  aria-checked={modo === id}
+                  className="rz-chip"
+                  onClick={() => {
+                    setModo(id);
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+          {modo === 'novo' ? (
+            <Alert tone="info" title="Entra ao lado, sem mexer no que existe">
+              Cada espaço do backup vira um espaço novo, com “(restaurado em …)” no nome e trilha de auditoria
+              própria. Os espaços atuais não mudam. Antes, o estado atual vira um ponto de volta.
+            </Alert>
+          ) : (
+            <Alert tone="warning" title={tudo ? 'Substitui o cofre inteiro' : 'Substitui este espaço'}>
+              {tudo
+                ? 'Todos os espaços deste aparelho ficam iguais ao backup.'
+                : 'O espaço do backup fica igual ao arquivo; o outro espaço não muda.'}{' '}
+              Antes, o estado atual vira um ponto de volta, e você pode voltar a ele depois.
+            </Alert>
+          )}
           {erro ? (
             <Alert tone="negative" title="Não deu certo">
               {erro}
@@ -254,7 +293,7 @@ export function RestoreBackupSheet(p: {
           ) : null}
           <div className="rz-form-actions">
             <Button variant="primary" size="lg" block busy={busy} onClick={() => void restaurar()}>
-              Restaurar
+              {modo === 'novo' ? 'Restaurar como espaço novo' : 'Restaurar'}
             </Button>
             <Button variant="ghost" block onClick={p.onClose}>
               Cancelar

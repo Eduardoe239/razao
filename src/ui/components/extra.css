@@ -384,3 +384,33 @@
     animation: rz-sheet-up var(--dur-slow) var(--ease-out) both;
   }
 }
+
+/* Seletor de espaço com mais de dois espaços (D-054) */
+.rz-ws-select-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  height: 38px;
+  padding: 0 var(--space-3) 0 var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--surface-subtle);
+  border: 1px solid var(--line);
+}
+.rz-ws-select {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  min-width: 0;
+  max-width: 220px;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.rz-ws-select:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
