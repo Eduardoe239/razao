@@ -14,6 +14,7 @@ import type { OpsContext, WorkspaceFootprint } from './account-ops';
 import * as ops from './account-ops';
 import type { EntryOps } from './session-entries';
 import { entryOps } from './session-entries';
+import { defaultCategoryItems } from './category-defaults';
 import type { BackupFile, BackupPreview } from './backup';
 import { createBackup, openBackup, restoreBackup } from './backup';
 import type {
@@ -119,6 +120,7 @@ function anotando(port: SessionPort, prefs: Prefs, clock: Clock, writes: WriteTr
     workspaceIds: () => port.workspaceIds(),
     load: (id) => port.load(id),
     commit: (id, op) => anotar(port.commit(id, op)),
+    hasOperation: (id, op) => port.hasOperation(id, op),
     deleteWorkspace: (id) => anotar(port.deleteWorkspace(id)),
     exportWorkspaces: (ids) => port.exportWorkspaces(ids),
     importWorkspaces: (d, m, s) => anotar(port.importWorkspaces(d, m, s)),
@@ -249,6 +251,7 @@ export class VaultSession {
         interna(ws.openingEquityId, 'equity', 'Saldos de abertura'),
         interna(ws.adjustmentEquityId, 'equity', 'Ajustes de saldo'),
         interna(ws.feeExpenseId, 'expense', 'Tarifas bancárias'),
+        ...defaultCategoryItems(valido.data, [], this.ids, agora),
       ],
       audit: { action: 'espaco.criar', target: `workspace/${id}`, after: { kind: ws.kind } },
     });

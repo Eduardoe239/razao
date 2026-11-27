@@ -131,7 +131,12 @@ export function balanceAdjustment(
  * INV-11: o estorno inverte cada linha do original e fica vinculado a ele.
  * Os dois continuam no histórico. Estornar um estorno desfaz a exclusão (Volume 04, seção 7.4).
  */
-export function reverseEntry(ctx: OperationContext, original: JournalEntry, reason?: string): JournalEntry[] {
+export function reverseEntry(
+  ctx: OperationContext,
+  original: JournalEntry,
+  reason?: string,
+  index = 0,
+): JournalEntry[] {
   ensure(original.workspaceId === ctx.workspaceId, 'WORKSPACE_MISMATCH', 'Estorno em outro espaço.');
   ensure(
     original.status === 'realizado',
@@ -141,6 +146,6 @@ export function reverseEntry(ctx: OperationContext, original: JournalEntry, reas
   const lines = original.lines.map((l) => ({ ...l, side: opposite(l.side) }));
   const meta: Record<string, string> = reason ? { reason } : {};
   return [
-    entry(ctx, 0, 'estorno', lines, original.currency, { links: { reverses: original.entryId }, meta }),
+    entry(ctx, index, 'estorno', lines, original.currency, { links: { reverses: original.entryId }, meta }),
   ];
 }

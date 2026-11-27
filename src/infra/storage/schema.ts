@@ -116,6 +116,7 @@ export const operationRecordSchema = z.object({
   operationId: id,
   workspaceId: id,
   at: z.string().max(40),
-  entryIds: z.array(id).max(500),
+  // Até 100 mil: mesclar categorias e recategorizar em lote mexem em muitos lançamentos de uma vez (D-049).
+  entryIds: z.array(id).max(100_000),
 });
 export type OperationRecord = z.infer<typeof operationRecordSchema>;

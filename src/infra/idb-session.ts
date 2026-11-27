@@ -134,6 +134,11 @@ export class IdbSession implements SessionPort {
     return guarded(async () => snapshot(await this.state(workspaceId)));
   }
 
+  async hasOperation(workspaceId: string, operationId: string): Promise<boolean> {
+    this.aberta();
+    return guarded(() => this.repo.hasOperation(workspaceId, operationId));
+  }
+
   async commit(workspaceId: string, op: WorkspaceCommit): Promise<'gravada' | 'repetida'> {
     this.aberta();
     return guarded(async () => {

@@ -62,6 +62,11 @@ export interface SessionPort {
   workspaceIds(): Promise<string[]>;
   load(workspaceId: string): Promise<WorkspaceSnapshot>;
   commit(workspaceId: string, op: WorkspaceCommit): Promise<'gravada' | 'repetida'>;
+  /**
+   * LAN-012: a operação já foi gravada? Os casos de uso perguntam antes de validar, porque depois de gravada
+   * a validação falharia (o lançamento editado não "existe mais") e o clique repetido viraria erro.
+   */
+  hasOperation(workspaceId: string, operationId: string): Promise<boolean>;
   /** COF-007: apaga tudo o que é do espaço, inclusive dos snapshots. Não tem volta. */
   deleteWorkspace(workspaceId: string): Promise<void>;
   /** BKP-001: tudo dos espaços pedidos, decifrado e validado, para ir ao arquivo de backup. */

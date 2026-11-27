@@ -1,6 +1,6 @@
 // Receitas, despesas e categorias pela aplicação, com o cofre real (IndexedDB simulado) e dados sintéticos.
 import { describe, expect, it } from 'vitest';
-import type { FlowEntryInput } from '@/application/entry-ops';
+import type { FlowEntryInput, UndoToken } from '@/application/entry-ops';
 import type { VaultSession } from '@/application/session';
 import { forAllAsync } from '@/domain/testing/prop';
 import { cofreAberto } from './test-helpers';
@@ -25,12 +25,12 @@ async function preparar() {
   const contas = Object.fromEntries(
     (await s.view(ws.id)).accounts.map((a) => [a.account.name, a.account.id]),
   );
-  const cat = async (name: string, group: 'income' | 'expense', parentId?: string) =>
-    (await s.entries.createCategory(ws.id, { name, group, parentId, operationId: s.newOperationId() }))
-      .categoryId;
-  const mercado = await cat('Mercado', 'expense');
-  const farmacia = await cat('Farmácia', 'expense');
-  const salario = await cat('Salário', 'income');
+  // Categorias padrão do espaço novo (D-049).
+  const cats = await s.entries.categories(ws.id);
+  const cat = (name: string) => cats.find((x) => x.name === name)?.id ?? '';
+  const mercado = cat('Mercado');
+  const farmacia = cat('Farmácia');
+  const salario = cat('Salário');
   return {
     s,
     m,
@@ -58,6 +58,11 @@ const despesa = (b: Base, centavos: number, extra: Partial<FlowEntryInput> = {})
 
 const saldo = async (s: VaultSession, wsId: string, nome = 'Banco Azul') =>
   (await s.view(wsId)).accounts.find((a) => a.account.name === nome)?.balance;
+
+function token(u: UndoToken | null): UndoToken {
+  if (!u) throw new Error('A exclusão devia devolver o "Desfazer".');
+  return u;
+}
 
 async function reabrir(b: Base): Promise<VaultSession> {
   b.s.lock();
@@ -89,6 +94,21 @@ describe('receitas e despesas pela aplicação', () => {
     expect(await b.s.entries.create(b.ws.id, input)).toBe('repetida');
     expect(await b.s.entries.list(b.ws.id)).toHaveLength(1);
     expect(await saldo(b.s, b.ws.id)).toBe(99000);
+  });
+
+  it('[LAN-012] editar e confirmar repetidos (clique duplo) também gravam uma vez só', async () => {
+    const b = await preparar();
+    await b.s.entries.create(b.ws.id, despesa(b, 1000));
+    await b.s.entries.create(b.ws.id, despesa(b, 500, { status: 'pendente', date: '2027-04-01' }));
+    const [pend, real] = await b.s.entries.list(b.ws.id);
+    const edicao = despesa(b, 1500);
+    expect(await b.s.entries.edit(b.ws.id, real?.entryId ?? '', edicao)).toBe('gravada');
+    expect(await b.s.entries.edit(b.ws.id, real?.entryId ?? '', edicao)).toBe('repetida');
+    const conf = { entryId: pend?.entryId ?? '', date: '2027-03-09', operationId: b.s.newOperationId() };
+    expect(await b.s.entries.confirm(b.ws.id, conf)).toBe('gravada');
+    expect(await b.s.entries.confirm(b.ws.id, conf)).toBe('repetida');
+    expect(await saldo(b.s, b.ws.id)).toBe(100000 - 1500 - 500);
+    expect(await b.s.entries.list(b.ws.id)).toHaveLength(2);
   });
 
   it('[LAN-007] dividido em duas categorias: uma saída com o total exato', async () => {
@@ -195,9 +215,14 @@ describe('receitas e despesas pela aplicação', () => {
     await b.s.entries.create(b.ws.id, despesa(b, 5000));
     await b.s.entries.create(b.ws.id, despesa(b, 900, { status: 'pendente', date: '2027-04-01' }));
     const [pend, real] = await b.s.entries.list(b.ws.id);
-    const r1 = await b.s.entries.remove(b.ws.id, {
-      entryId: real?.entryId ?? '',
-      operationId: b.s.newOperationId(),
+    const opExcluir = b.s.newOperationId();
+    const r1 = await b.s.entries.remove(b.ws.id, { entryId: real?.entryId ?? '', operationId: opExcluir });
+    // Clique repetido no "Excluir": não grava de novo e não oferece outro "Desfazer".
+    expect(
+      await b.s.entries.remove(b.ws.id, { entryId: real?.entryId ?? '', operationId: opExcluir }),
+    ).toEqual({
+      result: 'repetida',
+      undo: null,
     });
     const r2 = await b.s.entries.remove(b.ws.id, {
       entryId: pend?.entryId ?? '',
@@ -205,14 +230,18 @@ describe('receitas e despesas pela aplicação', () => {
     });
     expect(await b.s.entries.list(b.ws.id)).toHaveLength(0);
     expect(await saldo(b.s, b.ws.id)).toBe(100000);
-    await b.s.entries.undoRemove(b.ws.id, { undo: r1.undo, operationId: b.s.newOperationId() });
-    await b.s.entries.undoRemove(b.ws.id, { undo: r2.undo, operationId: b.s.newOperationId() });
+    const u1 = token(r1.undo);
+    const u2 = token(r2.undo);
+    const opDesfazer = b.s.newOperationId();
+    await b.s.entries.undoRemove(b.ws.id, { undo: u1, operationId: opDesfazer });
+    expect(await b.s.entries.undoRemove(b.ws.id, { undo: u1, operationId: opDesfazer })).toBe('repetida');
+    await b.s.entries.undoRemove(b.ws.id, { undo: u2, operationId: b.s.newOperationId() });
     expect(await saldo(b.s, b.ws.id)).toBe(95000);
     await expect(
-      b.s.entries.undoRemove(b.ws.id, { undo: r1.undo, operationId: b.s.newOperationId() }),
+      b.s.entries.undoRemove(b.ws.id, { undo: u1, operationId: b.s.newOperationId() }),
     ).rejects.toThrow(/já foi desfeita/);
     await expect(
-      b.s.entries.undoRemove(b.ws.id, { undo: r2.undo, operationId: b.s.newOperationId() }),
+      b.s.entries.undoRemove(b.ws.id, { undo: u2, operationId: b.s.newOperationId() }),
     ).rejects.toThrow(/já foi recuperado/);
     const s2 = await reabrir(b);
     expect((await s2.entries.list(b.ws.id)).map((r) => r.entryId).sort()).toEqual(
@@ -294,15 +323,16 @@ describe('[CAT-001] categorias como contas internas', () => {
     const b = await preparar();
     const nova = (name: string, group: 'income' | 'expense', parentId?: string) =>
       b.s.entries.createCategory(b.ws.id, { name, group, parentId, operationId: b.s.newOperationId() });
-    const sub = (await nova('Hortifruti', 'expense', b.mercado)).categoryId;
+    const outros = (await b.s.entries.categories(b.ws.id)).find((x) => x.name === 'Outros gastos')?.id;
+    const sub = (await nova('Hortifruti', 'expense', outros)).categoryId;
     await expect(nova('Feira', 'expense', sub)).rejects.toThrow(/Subcategoria não tem/);
-    await expect(nova('Bônus', 'income', b.mercado)).rejects.toThrow(/mesmo tipo/);
+    await expect(nova('Bônus', 'income', outros)).rejects.toThrow(/mesmo tipo/);
     await expect(nova('X', 'expense', 'nao-existe')).rejects.toThrow(/não existe/);
-    await expect(nova('mercado', 'expense')).rejects.toThrow(/Já existe/);
+    await expect(nova('outros GASTOS', 'expense')).rejects.toThrow(/Já existe/);
     await expect(nova('   ', 'expense')).rejects.toThrow(/nome/);
     expect((await nova('Mercado', 'income')).result).toBe('gravada');
     const cats = await b.s.entries.categories(b.ws.id);
-    expect(cats.find((c) => c.id === sub)?.parentId).toBe(b.mercado);
+    expect(cats.find((c) => c.id === sub)?.parentId).toBe(outros);
     await b.s.entries.create(b.ws.id, despesa(b, 300, { parts: [{ categoryId: sub, amountCents: 300 }] }));
     expect(await saldo(b.s, b.ws.id)).toBe(99700);
   });

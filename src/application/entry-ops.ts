@@ -16,7 +16,7 @@ import {
 import type { EntryStatus, JournalEntry } from '@/domain/ledger';
 import { money } from '@/domain/money';
 import type { OpsContext } from './account-ops';
-import { contaDe, dataAte, domainSafe, writable } from './account-ops';
+import { alreadyDone, contaDe, dataAte, domainSafe, writable } from './account-ops';
 import { AppError } from './errors';
 import type { Account, Category } from './model';
 import type { WorkspaceSnapshot } from './ports';
@@ -160,6 +160,8 @@ export async function editEntry(
   input: FlowEntryInput,
 ): Gravacao {
   writable(c.port);
+  if (await alreadyDone(c, workspaceId, input.operationId)) return 'repetida';
+  if (await alreadyDone(c, workspaceId, input.operationId)) return 'repetida';
   const snap = await c.port.load(workspaceId);
   const original = ativo(snap, entryId);
   const { flow, date } = montar(snap, input, hojeDe(c, snap));
@@ -174,13 +176,15 @@ export async function editEntry(
   });
 }
 
-/** LAN-006: excluir. Devolve o que a interface usa para desfazer nos 10 s seguintes. */
+/** LAN-006: excluir. Devolve o que a interface usa para desfazer nos 10 s seguintes (nada, se for repetida). */
 export async function deleteEntry(
   c: OpsContext,
   workspaceId: string,
   input: { entryId: string; operationId: string },
-): Promise<{ result: 'gravada' | 'repetida'; undo: UndoToken }> {
+): Promise<{ result: 'gravada' | 'repetida'; undo: UndoToken | null }> {
   writable(c.port);
+  // Repetida: o "Desfazer" já foi entregue na primeira vez; a segunda não oferece outro.
+  if (await alreadyDone(c, workspaceId, input.operationId)) return { result: 'repetida', undo: null };
   const snap = await c.port.load(workspaceId);
   const original = ativo(snap, input.entryId);
   const change = domainSafe(() =>
@@ -205,6 +209,7 @@ export async function undoDeleteEntry(
   input: { undo: UndoToken; operationId: string },
 ): Gravacao {
   writable(c.port);
+  if (await alreadyDone(c, workspaceId, input.operationId)) return 'repetida';
   const snap = await c.port.load(workspaceId);
   let change: JournalChange;
   let alvo: string;
@@ -240,6 +245,7 @@ export async function confirmEntry(
   input: { entryId: string; date: string; operationId: string },
 ): Gravacao {
   writable(c.port);
+  if (await alreadyDone(c, workspaceId, input.operationId)) return 'repetida';
   const snap = await c.port.load(workspaceId);
   const pendente = ativo(snap, input.entryId);
   const date = dataAte(input.date, hojeDe(c, snap));

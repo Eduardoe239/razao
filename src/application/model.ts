@@ -73,9 +73,23 @@ export const categorySchema = z.object({
 });
 export type Category = z.infer<typeof categorySchema>;
 
+/** CAT-003: "descrição contém X → categoria Y". Regra apagada fica com `removed`, porque item não se apaga. */
+export const categoryRuleSchema = z.object({
+  id: z.string().min(1).max(200),
+  pattern: z.string().trim().min(2).max(80),
+  categoryId: z.string().min(1).max(200),
+  scope: z.enum(['receita', 'despesa', 'ambas']),
+  priority: z.number().int().min(0).max(1_000_000),
+  active: z.boolean(),
+  removed: z.boolean(),
+  createdAt: z.string().max(40),
+});
+export type CategoryRuleItem = z.infer<typeof categoryRuleSchema>;
+
 export const ENTITY = {
   workspace: 'workspace',
   account: 'account',
   ledgerAccount: 'ledger-account',
   category: 'category',
+  categoryRule: 'category-rule',
 } as const;

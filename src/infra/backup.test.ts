@@ -55,11 +55,13 @@ describe('backup', () => {
       formatVersion: 1,
       scope: { kind: 'cofre' },
     });
-    for (const segredo of ['Banco Azul', 'Norte Software', '927035', 'Carteira'])
+    for (const segredo of ['Banco Azul', 'Norte Software', '927035', 'Carteira', 'Mercado', 'Fornecedores'])
       expect(b.text).not.toContain(segredo);
+    // Entidades: as da Alpha 1 mais as categorias padrão (D-049): PF 25 categorias e 24 contas internas novas
+    // (Tarifas bancárias usa a que já existia); PJ 14 categorias e 13 contas internas.
     expect(b.manifest.workspaces.map((w) => [w.kind, w.counts.entities, w.counts.entries])).toEqual([
-      ['PF', 8, 2],
-      ['PJ', 6, 1],
+      ['PF', 8 + 49, 2],
+      ['PJ', 6 + 27, 1],
     ]);
   });
 

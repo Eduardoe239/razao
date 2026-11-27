@@ -29,6 +29,11 @@ export function domainSafe<T>(fn: () => T): T {
   }
 }
 
+/** LAN-012: a mesma operação de novo (clique duplo, reenvio) responde "repetida" antes de validar qualquer coisa. */
+export function alreadyDone(c: OpsContext, workspaceId: string, operationId: string): Promise<boolean> {
+  return c.port.hasOperation(workspaceId, operationId);
+}
+
 export function writable(port: SessionPort): void {
   if (port.safeMode) {
     throw new AppError(

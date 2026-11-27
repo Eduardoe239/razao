@@ -171,6 +171,11 @@ export class VaultRepository {
     return state;
   }
 
+  /** LAN-012: a operação já está no registro? Só a chave é lida; nada é decifrado. */
+  async hasOperation(workspaceId: string, operationId: string): Promise<boolean> {
+    return (await this.db.getKey('operations', [workspaceId, operationId])) !== undefined;
+  }
+
   /**
    * Grava uma operação inteira numa transação só: lançamentos, entidades, registro da operação e auditoria.
    * Devolve "repetida" se a operação já tinha sido gravada (INV-06).
